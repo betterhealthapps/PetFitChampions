@@ -281,6 +281,14 @@ export default function GemShopScreen({ navigation }) {
   };
 
   const renderTricks = () => {
+    if (!currentPet) {
+      return (
+        <View style={styles.section}>
+          <Text style={styles.warningText}>Loading pet data...</Text>
+        </View>
+      );
+    }
+
     return (
       <View style={styles.section}>
         {BATTLE_TRICKS.map(trick => {

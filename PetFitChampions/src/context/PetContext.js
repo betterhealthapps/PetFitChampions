@@ -150,8 +150,14 @@ export const PetProvider = ({ children }) => {
     return newGems;
   };
 
+  const updatePet = async (updatedPet) => {
+    setPet(updatedPet);
+    await savePet(updatedPet);
+  };
+
   const value = {
     pet,
+    currentPet: pet,
     gems,
     loading,
     selectPet,
@@ -161,6 +167,7 @@ export const PetProvider = ({ children }) => {
     addGems,
     setGems,
     evolvePet,
+    updatePet,
   };
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;
