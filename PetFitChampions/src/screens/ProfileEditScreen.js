@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, Modal, Platform } from 'react-native';
 import { Snackbar } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { AuthContext } from '../context/AuthContext';
 import { getProfileData, saveProfileData } from '../utils/storage';
 
@@ -22,6 +23,9 @@ export default function ProfileEditScreen({ navigation }) {
   const [hasChanges, setHasChanges] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [socialModalVisible, setSocialModalVisible] = useState(false);
+  const [socialPlatform, setSocialPlatform] = useState('');
+  const [socialUsername, setSocialUsername] = useState('');
 
   useEffect(() => {
     loadProfileData();
@@ -54,8 +58,22 @@ export default function ProfileEditScreen({ navigation }) {
     if (!result.canceled) {
       setUploading(true);
       try {
-        const uri = result.assets[0].uri;
-        setProfileData({ ...profileData, photoURL: uri });
+        const tempUri = result.assets[0].uri;
+        let finalUri = tempUri;
+        
+        if (Platform.OS !== 'web' && FileSystem.documentDirectory) {
+          const filename = `profile_${Date.now()}.jpg`;
+          const destinationUri = FileSystem.documentDirectory + filename;
+          
+          await FileSystem.copyAsync({
+            from: tempUri,
+            to: destinationUri
+          });
+          
+          finalUri = destinationUri;
+        }
+        
+        setProfileData({ ...profileData, photoURL: finalUri });
         setHasChanges(true);
         showMessage('Photo selected!');
       } catch (error) {
@@ -67,27 +85,22 @@ export default function ProfileEditScreen({ navigation }) {
   };
 
   const connectSocialMedia = (platform) => {
-    Alert.prompt(
-      `Connect ${platform}`,
-      `Enter your ${platform} username:`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Save',
-          onPress: (username) => {
-            setProfileData({
-              ...profileData,
-              socialMedia: {
-                ...profileData.socialMedia,
-                [platform.toLowerCase()]: username || '',
-              },
-            });
-            setHasChanges(true);
-          },
-        },
-      ],
-      'plain-text'
-    );
+    setSocialPlatform(platform);
+    setSocialUsername('');
+    setSocialModalVisible(true);
+  };
+
+  const handleSaveSocialMedia = () => {
+    setProfileData({
+      ...profileData,
+      socialMedia: {
+        ...profileData.socialMedia,
+        [socialPlatform.toLowerCase()]: socialUsername || '',
+      },
+    });
+    setHasChanges(true);
+    setSocialModalVisible(false);
+    showMessage(`${socialPlatform} connected!`);
   };
 
   const disconnectSocialMedia = (platform) => {
@@ -356,6 +369,45 @@ export default function ProfileEditScreen({ navigation }) {
       >
         {snackbarMessage}
       </Snackbar>
+
+      {/* Cross-platform Social Media Input Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={socialModalVisible}
+        onRequestClose={() => setSocialModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Connect {socialPlatform}</Text>
+            <Text style={styles.modalSubtitle}>
+              Enter your {socialPlatform} username:
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              value={socialUsername}
+              onChangeText={setSocialUsername}
+              placeholder={`@username`}
+              autoFocus={true}
+              autoCapitalize="none"
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setSocialModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSaveButton]}
+                onPress={handleSaveSocialMedia}
+              >
+                <Text style={styles.modalSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -566,5 +618,72 @@ const styles = StyleSheet.create({
   },
   snackbar: {
     backgroundColor: '#32808D',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 16,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: '#F5F5F5',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  modalSaveButton: {
+    backgroundColor: '#32808D',
+  },
+  modalCancelText: {
+    color: '#666666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalSaveText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
