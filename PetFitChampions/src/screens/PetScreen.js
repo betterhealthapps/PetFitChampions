@@ -20,7 +20,7 @@ export default function PetScreen() {
 
   const levelProgress = getLevelProgress();
   const stats = pet.stats || {};
-  const currentTier = pet.tier || 1;
+  const currentTier = Number(pet.tier) || 1;
   
   // Evolution eligibility
   const canEvolveTo2 = currentTier === 1 && pet.level >= 16;
