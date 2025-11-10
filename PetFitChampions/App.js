@@ -17,6 +17,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import TrackScreen from './src/screens/TrackScreen';
 import PetScreen from './src/screens/PetScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import ProfileEditScreen from './src/screens/ProfileEditScreen';
 import GemShopScreen from './src/screens/GemShopScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
 import BattleScreen from './src/screens/BattleScreen';
@@ -98,6 +99,11 @@ function ProfileStack() {
         name="ProfileMain" 
         component={ProfileScreen}
         options={{ headerTitle: 'Profile' }}
+      />
+      <Stack.Screen 
+        name="ProfileEdit" 
+        component={ProfileEditScreen}
+        options={{ headerTitle: 'Edit Profile' }}
       />
       <Stack.Screen 
         name="GemShop" 

@@ -1,0 +1,2626 @@
+Create a comprehensive user profile editing system with photo upload, contact details, and social media integration.
+
+REQUIREMENTS:
+
+1. CREATE ENHANCED PROFILE SCREEN:
+
+// screens/ProfileEditScreen.js
+
+import * as ImagePicker from 'expo-image-picker';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+export default function ProfileEditScreen({ navigation }) {
+const [userData, setUserData] = useState({
+username: '',
+displayName: '',
+email: '',
+phoneNumber: '',
+photoURL: null,
+bio: '',
+socialMedia: {
+instagram: '',
+twitter: '',
+facebook: '',
+},
+});
+const [uploading, setUploading] = useState(false);
+const [hasChanges, setHasChanges] = useState(false);
+
+useEffect(() => {
+loadUserProfile();
+}, []);
+
+const loadUserProfile = async () => {
+const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+const data = userDoc.data();
+setUserData({
+  username: data.username || '',
+  displayName: data.displayName || '',
+  email: data.email || auth.currentUser.email,
+  phoneNumber: data.phoneNumber || '',
+  photoURL: data.photoURL || null,
+  bio: data.bio || '',
+  socialMedia: data.socialMedia || {
+    instagram: '',
+    twitter: '',
+    facebook: '',
+  },
+});
+};
+
+const pickImage = async () => {
+// Request permission
+const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+if (status !== 'granted') {
+  Alert.alert('Permission Denied', 'We need camera roll permissions to upload a photo.');
+  return;
+}
+
+// Launch image picker
+const result = await ImagePicker.launchImageLibraryAsync({
+  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  allowsEditing: true,
+  aspect:,[1]
+  quality: 0.5,
+});
+
+if (!result.canceled) {
+  uploadImage(result.assets.uri);
+}
+};
+
+const uploadImage = async (uri) => {
+setUploading(true);
+try {
+  // Convert to blob
+  const response = await fetch(uri);
+  const blob = await response.blob();
+
+  // Upload to Firebase Storage
+  const storage = getStorage();
+  const storageRef = ref(storage, `profilePhotos/${auth.currentUser.uid}`);
+  
+  await uploadBytes(storageRef, blob);
+  const downloadURL = await getDownloadURL(storageRef);
+
+  // Update local state
+  setUserData({ ...userData, photoURL: downloadURL });
+  setHasChanges(true);
+  
+  Alert.alert('Success', 'Photo uploaded!');
+} catch (error) {
+  Alert.alert('Upload Error', error.message);
+} finally {
+  setUploading(false);
+}
+};
+
+const connectSocialMedia = async (platform) => {
+// For MVP - manual input
+// In production, integrate OAuth for each platform
+Alert.prompt(
+  `Connect ${platform}`,
+  `Enter your ${platform} username:`,
+  [
+    { text: 'Cancel', style: 'cancel' },
+    {
+      text: 'Save',
+      onPress: (username) => {
+        setUserData({
+          ...userData,
+          socialMedia: {
+            ...userData.socialMedia,
+            [platform.toLowerCase()]: username,
+          },
+        });
+        setHasChanges(true);
+      },
+    },
+  ],
+  'plain-text'
+);
+
+};
+
+const fetchSocialMediaInfo = async (platform) => {
+// In production, use social media APIs
+Alert.alert(
+'Fetch Info',
+This would fetch your name and photo from ${platform}.\n\nFor demo: Feature coming soon!
+);
+};
+
+const saveProfile = async () => {
+try {
+await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+displayName: userData.displayName,
+phoneNumber: userData.phoneNumber,
+photoURL: userData.photoURL,
+bio: userData.bio,
+socialMedia: userData.socialMedia,
+profileUpdatedAt: new Date(),
+});
+  Alert.alert('Success', 'Profile updated!');
+  setHasChanges(false);
+  navigation.goBack();
+} catch (error) {
+  Alert.alert('Error', error.message);
+}
+
+};
+
+return (
+<ScrollView style={styles.container}>
+{/* Header */}
+<View style={styles.header}>
+<Text style={styles.title}>Edit Profile</Text>
+</View>
+  {/* Photo Upload */}
+  <View style={styles.photoSection}>
+    <TouchableOpacity onPress={pickImage} disabled={uploading}>
+      {userData.photoURL ? (
+        <Image
+          source={{ uri: userData.photoURL }}
+          style={styles.profilePhoto}
+        />
+      ) : (
+        <View style={styles.photoPlaceholder}>
+          <Text style={styles.photoPlaceholderText}>
+            {userData.username.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+      )}
+      <View style={styles.editPhotoBadge}>
+        <Text style={styles.editPhotoIcon}>
+          {uploading ? '⏳' : '📷'}
+        </Text>
+      </View>
+    </TouchableOpacity>
+    <Text style={styles.photoHint}>Tap to change photo</Text>
+  </View>
+
+  {/* Basic Info */}
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>Basic Information</Text>
+
+    <View style={styles.inputGroup}>
+      <Text style={styles.label}>Username (Public)</Text>
+      <TextInput
+        style={[styles.input, styles.inputDisabled]}
+        value={userData.username}
+        editable={false}
+      />
+      <Text style={styles.hint}>Username cannot be changed</Text>
+    </View>
+
+    <View style={styles.inputGroup}>
+      <Text style={styles.label}>Display Name</Text>
+      <TextInput
+        style={styles.input}
+        value={userData.displayName}
+        onChangeText={(text) => {
+          setUserData({ ...userData, displayName: text });
+          setHasChanges(true);
+        }}
+        placeholder="Your full name"
+        maxLength={50}
+      />
+    </View>
+
+    <View style={styles.inputGroup}>
+      <Text style={styles.label}>Bio</Text>
+      <TextInput
+        style={[styles.input, styles.textArea]}
+        value={userData.bio}
+        onChangeText={(text) => {
+          setUserData({ ...userData, bio: text });
+          setHasChanges(true);
+        }}
+        placeholder="Tell others about yourself..."
+        multiline
+        numberOfLines={3}
+        maxLength={150}
+      />
+      <Text style={styles.charCount}>
+        {userData.bio.length}/150
+      </Text>
+    </View>
+  </View>
+
+  {/* Contact Info */}
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>Contact Information</Text>
+
+    <View style={styles.inputGroup}>
+      <Text style={styles.label}>Email</Text>
+      <TextInput
+        style={[styles.input, styles.inputDisabled]}
+        value={userData.email}
+        editable={false}
+      />
+      <Text style={styles.hint}>Email is managed in account settings</Text>
+    </View>
+
+    <View style={styles.inputGroup}>
+      <Text style={styles.label}>Phone Number (Optional)</Text>
+      <TextInput
+        style={styles.input}
+        value={userData.phoneNumber}
+        onChangeText={(text) => {
+          setUserData({ ...userData, phoneNumber: text });
+          setHasChanges(true);
+        }}
+        placeholder="+1 (555) 123-4567"
+        keyboardType="phone-pad"
+        maxLength={20}
+      />
+    </View>
+  </View>
+
+  {/* Social Media Connections */}
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>Social Media</Text>
+    <Text style={styles.sectionSubtitle}>
+      Connect your accounts to share achievements
+    </Text>
+
+    {/* Instagram */}
+    <View style={styles.socialCard}>
+      <View style={styles.socialInfo}>
+        <Text style={styles.socialIcon}>📷</Text>
+        <View style={styles.socialText}>
+          <Text style={styles.socialName}>Instagram</Text>
+          {userData.socialMedia.instagram ? (
+            <Text style={styles.socialUsername}>
+              @{userData.socialMedia.instagram}
+            </Text>
+          ) : (
+            <Text style={styles.socialDisconnected}>Not connected</Text>
+          )}
+        </View>
+      </View>
+      <View style={styles.socialActions}>
+        {userData.socialMedia.instagram ? (
+          <>
+            <TouchableOpacity
+              style={styles.fetchBtn}
+              onPress={() => fetchSocialMediaInfo('Instagram')}
+            >
+              <Text style={styles.fetchBtnText}>Fetch Info</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.disconnectBtn}
+              onPress={() => {
+                setUserData({
+                  ...userData,
+                  socialMedia: { ...userData.socialMedia, instagram: '' },
+                });
+                setHasChanges(true);
+              }}
+            >
+              <Text style={styles.disconnectBtnText}>Disconnect</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity
+            style={styles.connectBtn}
+            onPress={() => connectSocialMedia('Instagram')}
+          >
+            <Text style={styles.connectBtnText}>Connect</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+
+    {/* Twitter */}
+    <View style={styles.socialCard}>
+      <View style={styles.socialInfo}>
+        <Text style={styles.socialIcon}>🐦</Text>
+        <View style={styles.socialText}>
+          <Text style={styles.socialName}>Twitter</Text>
+          {userData.socialMedia.twitter ? (
+            <Text style={styles.socialUsername}>
+              @{userData.socialMedia.twitter}
+            </Text>
+          ) : (
+            <Text style={styles.socialDisconnected}>Not connected</Text>
+          )}
+        </View>
+      </View>
+      <View style={styles.socialActions}>
+        {userData.socialMedia.twitter ? (
+          <>
+            <TouchableOpacity
+              style={styles.fetchBtn}
+              onPress={() => fetchSocialMediaInfo('Twitter')}
+            >
+              <Text style={styles.fetchBtnText}>Fetch Info</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.disconnectBtn}
+              onPress={() => {
+                setUserData({
+                  ...userData,
+                  socialMedia: { ...userData.socialMedia, twitter: '' },
+                });
+                setHasChanges(true);
+              }}
+            >
+              <Text style={styles.disconnectBtnText}>Disconnect</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity
+            style={styles.connectBtn}
+            onPress={() => connectSocialMedia('Twitter')}
+          >
+            <Text style={styles.connectBtnText}>Connect</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+
+    {/* Facebook */}
+    <View style={styles.socialCard}>
+      <View style={styles.socialInfo}>
+        <Text style={styles.socialIcon}>👤</Text>
+        <View style={styles.socialText}>
+          <Text style={styles.socialName}>Facebook</Text>
+          {userData.socialMedia.facebook ? (
+            <Text style={styles.socialUsername}>
+              {userData.socialMedia.facebook}
+            </Text>
+          ) : (
+            <Text style={styles.socialDisconnected}>Not connected</Text>
+          )}
+        </View>
+      </View>
+      <View style={styles.socialActions}>
+        {userData.socialMedia.facebook ? (
+          <>
+            <TouchableOpacity
+              style={styles.fetchBtn}
+              onPress={() => fetchSocialMediaInfo('Facebook')}
+            >
+              <Text style={styles.fetchBtnText}>Fetch Info</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.disconnectBtn}
+              onPress={() => {
+                setUserData({
+                  ...userData,
+                  socialMedia: { ...userData.socialMedia, facebook: '' },
+                });
+                setHasChanges(true);
+              }}
+            >
+              <Text style={styles.disconnectBtnText}>Disconnect</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity
+            style={styles.connectBtn}
+            onPress={() => connectSocialMedia('Facebook')}
+          >
+            <Text style={styles.connectBtnText}>Connect</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  </View>
+
+  {/* Save Button */}
+  <TouchableOpacity
+    style={[styles.saveBtn, !hasChanges && styles.saveBtnDisabled]}
+    onPress={saveProfile}
+    disabled={!hasChanges}
+  >
+    <Text style={styles.saveBtnText}>
+      {hasChanges ? 'Save Changes' : 'No Changes'}
+    </Text>
+  </TouchableOpacity>
+
+  <View style={{ height: 40 }} />
+</ScrollView>
+
+);
+}
+
+
+2. INSTALL DEPENDENCIES:
+
+npx expo install expo-image-picker
+npm install firebase/storage
+
+
+3. FIREBASE STORAGE SETUP:
+
+Configure Firebase Storage in Firebase Console:
+- Go to Storage section
+- Set up security rules:
+
+rules_version = '2';
+service firebase.storage {
+match /b/{bucket}/o {
+match /profilePhotos/{userId} {
+allow read: if true;
+allow write: if request.auth != null && request.auth.uid == userId
+&& request.resource.size < 5 * 1024 * 1024 // 5MB limit
+&& request.resource.contentType.matches('image/.*');
+}
+}
+}
+
+
+4. ADD TO NAVIGATION:
+
+// In ProfileScreen.js, add edit button
+<TouchableOpacity
+style={styles.editBtn}
+onPress={() => navigation.navigate('ProfileEdit')}
+
+<Text style={styles.editBtnText}>Edit Profile</Text>
+</TouchableOpacity>
+
+
+Create comprehensive profile editing with:
+- Photo upload with preview
+- Display name and bio editing
+- Phone number (optional)
+- Social media connections
+- Fetch info from social platforms
+- Form validation
+- Unsaved changes warning
+- Firebase Storage integration
+
+Implement social media sharing for achievements, leaderboard rankings, and app promotion.
+
+REQUIREMENTS:
+
+1. INSTALL SHARING MODULE:
+
+npx expo install expo-sharing
+npx expo install expo-file-system
+npx expo install react-native-view-shot
+
+
+2. CREATE SHARING MANAGER:
+
+// utils/sharingManager.js
+
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import { captureRef } from 'react-native-view-shot';
+
+export const SHARE_TEMPLATES = {
+levelUp: {
+title: 'Level Up!',
+getMessage: (level, petName) =>
+🎉 My ${petName} just reached Level ${level} in PetFit Champions! Building healthy habits one day at a time. Join me! #PetFitChampions #HealthyLiving,
+},
+leaderboard: {
+title: 'Leaderboard Ranking',
+getMessage: (rank, category) =>
+🏆 I'm ranked #${rank} in ${category} on PetFit Champions! Competing with the best while staying healthy. #PetFitChampions #FitnessGoals,
+},
+streak: {
+title: 'Streak Achievement',
+getMessage: (days) =>
+🔥 ${days}-day streak on PetFit Champions! Consistency is key to building lasting healthy habits. #HealthStreak #PetFitChampions,
+},
+raidVictory: {
+title: 'Raid Victory',
+getMessage: (bossName) =>
+⚔️ We defeated ${bossName} in a community raid! Join thousands building better health together. #PetFitChampions #CommunityHealth,
+},
+appInvite: {
+title: 'Join PetFit Champions',
+getMessage: () =>
+🐾 I'm building healthy habits with PetFit Champions! It's like Pokémon but for real health goals. Join me and let's grow together! Download now: [APP_LINK],
+},
+};
+
+export const shareText = async (template, data = {}) => {
+const shareData = SHARE_TEMPLATES[template];
+const message = shareData.getMessage(...Object.values(data));
+
+if (await Sharing.isAvailableAsync()) {
+await Sharing.shareAsync('', {
+mimeType: 'text/plain',
+dialogTitle: shareData.title,
+UTI: 'public.text',
+});
+} else {
+// Fallback for web or unsupported platforms
+if (navigator.share) {
+await navigator.share({
+title: shareData.title,
+text: message,
+});
+} else {
+// Copy to clipboard
+Alert.alert('Share', message);
+}
+}
+};
+
+export const shareImage = async (viewRef, template, data = {}) => {
+try {
+// Capture screenshot of view
+const uri = await captureRef(viewRef, {
+format: 'png',
+quality: 0.9,
+});
+// Share the image
+if (await Sharing.isAvailableAsync()) {
+  const shareData = SHARE_TEMPLATES[template];
+  const message = shareData.getMessage(...Object.values(data));
+  
+  await Sharing.shareAsync(uri, {
+    mimeType: 'image/png',
+    dialogTitle: shareData.title,
+    UTI: 'public.image',
+  });
+}
+} catch (error) {
+Alert.alert('Share Error', error.message);
+}
+};
+
+
+3. CREATE SHAREABLE CARDS:
+
+// components/ShareCard.js
+
+export const LevelUpShareCard = forwardRef(({ level, petName, petImage }, ref) => (
+<View ref={ref} style={styles.shareCard}>
+<LinearGradient
+colors={['#32808D', '#5EB8C6']}
+style={styles.gradient}
+>
+{/* App Branding */}
+<View style={styles.branding}>
+<Text style={styles.appName}>PetFit Champions</Text>
+</View>
+  {/* Achievement */}
+  <View style={styles.achievement}>
+    <Text style={styles.achievementIcon}>🎉</Text>
+    <Text style={styles.achievementTitle}>LEVEL UP!</Text>
+    <Text style={styles.levelNumber}>{level}</Text>
+  </View>
+
+  {/* Pet Display */}
+  <View style={styles.petDisplay}>
+    <Image source={{ uri: petImage }} style={styles.petImage} />
+    <Text style={styles.petName}>{petName}</Text>
+  </View>
+
+  {/* Call to Action */}
+  <View style={styles.cta}>
+    <Text style={styles.ctaText}>Join me in building healthy habits!</Text>
+    <Text style={styles.appLink}>PetFitChampions.app</Text>
+  </View>
+</LinearGradient>
+</View> ));
+export const LeaderboardShareCard = forwardRef(({ rank, username, category, stats }, ref) => (
+<View ref={ref} style={styles.shareCard}>
+<LinearGradient
+colors={['#FFD700', '#FFA500']}
+style={styles.gradient}
+>
+<View style={styles.branding}>
+<Text style={styles.appName}>PetFit Champions</Text>
+</View>
+  <View style={styles.achievement}>
+    <Text style={styles.achievementIcon}>
+      {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '🏆'}
+    </Text>
+    <Text style={styles.rankNumber}>#{rank}</Text>
+    <Text style={styles.categoryName}>{category}</Text>
+  </View>
+
+  <View style={styles.userInfo}>
+    <Text style={styles.username}>{username}</Text>
+    <Text style={styles.stats}>{stats}</Text>
+  </View>
+
+  <View style={styles.cta}>
+    <Text style={styles.ctaText}>Can you beat my score?</Text>
+    <Text style={styles.appLink}>PetFitChampions.app</Text>
+  </View>
+</LinearGradient>
+</View> ));
+
+4. INTEGRATE INTO SCREENS:
+
+// In PetScreen.js - Level Up Share
+
+const shareCardRef = useRef();
+
+const handleShareLevelUp = async () => {
+  Alert.alert(
+    'Share Achievement',
+    'Share your level-up achievement?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Share Image',
+        onPress: () => shareImage(shareCardRef, 'levelUp', {
+          level: petLevel,
+          petName: petData.name,
+        }),
+      },
+      {
+        text: 'Share Text',
+        onPress: () => shareText('levelUp', {
+          level: petLevel,
+          petName: petData.name,
+        }),
+      },
+    ]
+  );
+};
+
+// Hidden share card (for screenshot)
+<View style={{ position: 'absolute', left: -9999 }}>
+  <LevelUpShareCard
+    ref={shareCardRef}
+    level={petLevel}
+    petName={petData.name}
+    petImage={petData.image}
+  />
+</View>
+
+// Share button
+<TouchableOpacity style={styles.shareBtn} onPress={handleShareLevelUp}>
+  <Text style={styles.shareBtnText}>📤 Share</Text>
+</TouchableOpacity>
+// In LeaderboardScreen.js - Ranking Share
+
+const handleShareRanking = async (userRank) => {
+  Alert.alert(
+    'Share Ranking',
+    'Brag about your leaderboard position?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Share',
+        onPress: () => shareText('leaderboard', {
+          rank: userRank.position,
+          category: activeTab,
+        }),
+      },
+    ]
+  );
+};
+
+// In HomeScreen.js - App Invite
+
+const handleInviteFriends = async () => {
+  await shareText('appInvite', {});
+};
+
+<TouchableOpacity style={styles.inviteBtn} onPress={handleInviteFriends}>
+  <Text style={styles.inviteBtnText}>📨 Invite Friends</Text>
+</TouchableOpacity>
+
+5.SOCIAL SHARE BUTTONS:
+
+// components/SocialShareButtons.js
+
+export default function SocialShareButtons({ template, data }) {
+  const shareToInstagram = async () => {
+    // For Instagram, need to save image first
+    const uri = await captureAndSaveImage();
+    
+    Linking.openURL(`instagram://library?AssetPath=${uri}`);
+  };
+
+  const shareToTwitter = () => {
+    const message = SHARE_TEMPLATES[template].getMessage(...Object.values(data));
+    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+    Linking.openURL(tweetUrl);
+  };
+
+  const shareToFacebook = () => {
+    const message = SHARE_TEMPLATES[template].getMessage(...Object.values(data));
+    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://petfitchampions.app')}&quote=${encodeURIComponent(message)}`;
+    Linking.openURL(fbUrl);
+  };
+
+  return (
+    <View style={styles.socialButtons}>
+      <TouchableOpacity style={styles.socialBtn} onPress={shareToInstagram}>
+        <Text style={styles.socialIcon}>📷</Text>
+        <Text style={styles.socialText}>Instagram</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.socialBtn} onPress={shareToTwitter}>
+        <Text style={styles.socialIcon}>🐦</Text>
+        <Text style={styles.socialText}>Twitter</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.socialBtn} onPress={shareToFacebook}>
+        <Text style={styles.socialIcon}>👤</Text>
+        <Text style={styles.socialText}>Facebook</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.socialBtn} onPress={() => shareText(template, data)}>
+        <Text style={styles.socialIcon}>📤</Text>
+        <Text style={styles.socialText}>More</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+6.REFERRAL TRACKING:
+
+// Track referrals in Firebase
+
+const generateReferralCode = (userId) => {
+  return userId.substring(0, 8).toUpperCase();
+};
+
+const trackReferral = async (referralCode) => {
+  const usersRef = collection(db, 'users');
+  const q = query(usersRef, where('referralCode', '==', referralCode));
+  const snapshot = await getDocs(q);
+  
+  if (!snapshot.empty) {
+    const referrer = snapshot.docs;
+    
+    // Award bonus to referrer
+    await updateDoc(doc(db, 'users', referrer.id), {
+      gems: increment(50), // Referral bonus
+      referrals: increment(1),
+    });
+    
+    // Award bonus to new user
+    await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+      gems: increment(25),
+      referredBy: referrer.id,
+    });
+  }
+};
+
+Create complete sharing system with:
+
+Text and image sharing
+
+Customizable share templates
+
+Beautiful shareable cards
+
+Platform-specific sharing (Instagram, Twitter, Facebook)
+
+Referral tracking
+
+App invite system
+
+
+HEALTH APP INTEGRATION (APPLE/GOOGLE FIT)
+
+Integrate with Apple Health and Google Fit to automatically sync health data instead of manual entry.
+
+REQUIREMENTS:
+
+1. INSTALL HEALTH KIT:
+npx expo install expo-apple-healthkit
+npx expo install react-native-google-fit
+
+2.CREATE HEALTH SYNC MANAGER:
+
+// utils/healthSyncManager.js
+
+import AppleHealthKit from 'expo-apple-healthkit';
+import GoogleFit, { Scopes } from 'react-native-google-fit';
+import { Platform } from 'react-native';
+
+const HEALTH_PERMISSIONS = {
+  permissions: {
+    read: [
+      AppleHealthKit.Constants.Permissions.Steps,
+      AppleHealthKit.Constants.Permissions.HeartRate,
+      AppleHealthKit.Constants.Permissions.SleepAnalysis,
+      AppleHealthKit.Constants.Permissions.ActiveEnergyBurned,
+      AppleHealthKit.Constants.Permissions.DistanceWalkingRunning,
+    ],
+  },
+};
+
+const GOOGLE_FIT_OPTIONS = {
+  scopes: [
+    Scopes.FITNESS_ACTIVITY_READ,
+    Scopes.FITNESS_BODY_READ,
+    Scopes.FITNESS_LOCATION_READ,
+  ],
+};
+
+export const initializeHealthKit = async () => {
+  if (Platform.OS === 'ios') {
+    return new Promise((resolve, reject) => {
+      AppleHealthKit.initHealthKit(HEALTH_PERMISSIONS, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(true);
+        }
+      });
+    });
+  } else if (Platform.OS === 'android') {
+    const authorized = await GoogleFit.authorize(GOOGLE_FIT_OPTIONS);
+    return authorized.success;
+  }
+  
+  return false;
+};
+
+export const getTodaySteps = async () => {
+  const today = new Date();
+  const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+  
+  if (Platform.OS === 'ios') {
+    return new Promise((resolve) => {
+      const options = {
+        date: new Date().toISOString(),
+        includeManuallyAdded: true,
+      };
+      
+      AppleHealthKit.getStepCount(options, (err, results) => {
+        if (err) {
+          resolve(0);
+        } else {
+          resolve(results.value || 0);
+        }
+      });
+    });
+  } else if (Platform.OS === 'android') {
+    const res = await GoogleFit.getDailyStepCountSamples({
+      startDate: startOfDay.toISOString(),
+      endDate: new Date().toISOString(),
+    });
+    
+    if (res && res.length > 0) {
+      const googleFitData = res.find(r => r.source === 'com.google.android.gms');
+      return googleFitData?.steps?.value || 0;
+    }
+  }
+  
+  return 0;
+};
+
+export const getSleepData = async () => {
+  const today = new Date();
+  const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+  const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+  
+  if (Platform.OS === 'ios') {
+    return new Promise((resolve) => {
+      const options = {
+        startDate: startOfDay.toISOString(),
+        endDate: endOfDay.toISOString(),
+      };
+      
+      AppleHealthKit.getSleepSamples(options, (err, results) => {
+        if (err || !results || results.length === 0) {
+          resolve(0);
+        } else {
+          // Calculate total sleep in hours
+          const totalMinutes = results.reduce((sum, sample) => {
+            const start = new Date(sample.startDate);
+            const end = new Date(sample.endDate);
+            return sum + (end - start) / (1000 * 60);
+          }, 0);
+          
+          resolve(totalMinutes / 60);
+        }
+      });
+    });
+  } else if (Platform.OS === 'android') {
+    const res = await GoogleFit.getSleepSamples({
+      startDate: startOfDay.toISOString(),
+      endDate: endOfDay.toISOString(),
+    });
+    
+    if (res && res.length > 0) {
+      const totalMinutes = res.reduce((sum, sample) => {
+        return sum + (sample.endDate - sample.startDate) / (1000 * 60);
+      }, 0);
+      
+      return totalMinutes / 60;
+    }
+  }
+  
+  return 0;
+};
+
+export const getHeartRate = async () => {
+  if (Platform.OS === 'ios') {
+    return new Promise((resolve) => {
+      const options = {
+        unit: 'bpm',
+        startDate: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // Last hour
+        endDate: new Date().toISOString(),
+        ascending: false,
+        limit: 1,
+      };
+      
+      AppleHealthKit.getHeartRateSamples(options, (err, results) => {
+        if (err || !results || results.length === 0) {
+          resolve(null);
+        } else {
+          resolve(Math.round(results.value));
+        }
+      });
+    });
+  } else if (Platform.OS === 'android') {
+    const res = await GoogleFit.getHeartRateSamples({
+      startDate: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      endDate: new Date().toISOString(),
+    });
+    
+    if (res && res.length > 0) {
+      return Math.round(res[res.length - 1].value);
+    }
+  }
+  
+  return null;
+};
+
+export const syncAllHealthData = async () => {
+  try {
+    const [steps, sleep, heartRate] = await Promise.all([
+      getTodaySteps(),
+      getSleepData(),
+      getHeartRate(),
+    ]);
+    
+    return {
+      steps,
+      sleepHours: sleep,
+      heartRate,
+      lastSynced: new Date(),
+    };
+  } catch (error) {
+    console.error('Health sync error:', error);
+    return null;
+  }
+};
+
+3.CREATE HEALTH SYNC SCREEN:
+
+// screens/HealthSyncScreen.js
+
+export default function HealthSyncScreen({ navigation }) {
+  const [isConnected, setIsConnected] = useState(false);
+  const [healthData, setHealthData] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [autoSync, setAutoSync] = useState(false);
+
+  useEffect(() => {
+    checkConnection();
+    loadSyncSettings();
+  }, []);
+
+  const checkConnection = async () => {
+    const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+    setIsConnected(userDoc.data().healthKitConnected || false);
+  };
+
+  const loadSyncSettings = async () => {
+    const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+    setAutoSync(userDoc.data().autoSyncHealth || false);
+  };
+
+  const handleConnect = async () => {
+    try {
+      const initialized = await initializeHealthKit();
+      
+      if (initialized) {
+        await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+          healthKitConnected: true,
+          healthKitConnectedAt: new Date(),
+        });
+        
+        setIsConnected(true);
+        Alert.alert('Success', 'Health app connected!');
+        
+        // Perform initial sync
+        handleSync();
+      } else {
+        Alert.alert('Error', 'Failed to connect to health app');
+      }
+    } catch (error) {
+      Alert.alert('Connection Error', error.message);
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    
+    try {
+      const data = await syncAllHealthData();
+      
+      if (data) {
+        setHealthData(data);
+        
+        // Update Firebase
+        await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+          healthData: data,
+          lastHealthSync: new Date(),
+        });
+        
+        Alert.alert('Synced!', `Steps: ${data.steps}\nSleep: ${data.sleepHours.toFixed(1)}hrs`);
+      }
+    } catch (error) {
+      Alert.alert('Sync Error', error.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const toggleAutoSync = async () => {
+    const newValue = !autoSync;
+    setAutoSync(newValue);
+    
+    await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+      autoSyncHealth: newValue,
+    });
+    
+    if (newValue) {
+      Alert.alert(
+        'Auto-Sync Enabled',
+        'Health data will sync automatically when you track activities'
+      );
+    }
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Health App Sync</Text>
+        <Text style={styles.subtitle}>
+          Connect to {Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit'}
+        </Text>
+      </View>
+
+      {!isConnected ? (
+        /* Not Connected State */
+        <View style={styles.notConnected}>
+          <Text style={styles.icon}>
+            {Platform.OS === 'ios' ? '❤️' : '🏃'}
+          </Text>
+          <Text style={styles.notConnectedTitle}>
+            Sync with {Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit'}
+          </Text>
+          <Text style={styles.notConnectedDesc}>
+            Automatically track your steps, sleep, and heart rate without manual entry
+          </Text>
+
+          <View style={styles.benefits}>
+            <View style={styles.benefit}>
+              <Text style={styles.benefitIcon}>✓</Text>
+              <Text style={styles.benefitText}>Auto-sync daily steps</Text>
+            </View>
+            <View style={styles.benefit}>
+              <Text style={styles.benefitIcon}>✓</Text>
+              <Text style={styles.benefitText}>Track sleep patterns</Text>
+            </View>
+            <View style={styles.benefit}>
+              <Text style={styles.benefitIcon}>✓</Text>
+              <Text style={styles.benefitText}>Monitor heart rate</Text>
+            </View>
+            <View style={styles.benefit}>
+              <Text style={styles.benefitIcon}>✓</Text>
+              <Text style={styles.benefitText}>Earn XP automatically</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.connectBtn} onPress={handleConnect}>
+            <Text style={styles.connectBtnText}>
+              Connect {Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit'}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.privacy}>
+            🔒 Your health data is private and never shared
+          </Text>
+        </View>
+      ) : (
+        /* Connected State */
+        <View style={styles.connected}>
+          <View style={styles.connectedHeader}>
+            <Text style={styles.connectedIcon}>✓</Text>
+            <Text style={styles.connectedText}>Connected</Text>
+          </View>
+
+          {/* Auto-Sync Toggle */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>Auto-Sync</Text>
+              <Text style={styles.settingDesc}>
+                Sync automatically when tracking activities
+              </Text>
+            </View>
+            <Switch
+              value={autoSync}
+              onValueChange={toggleAutoSync}
+              trackColor={{ false: '#CCC', true: '#32808D' }}
+            />
+          </View>
+
+          {/* Sync Button */}
+          <TouchableOpacity
+            style={styles.syncBtn}
+            onPress={handleSync}
+            disabled={syncing}
+          >
+            <Text style={styles.syncBtnText}>
+              {syncing ? '⏳ Syncing...' : '🔄 Sync Now'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Health Data Display */}
+          {healthData && (
+            <View style={styles.healthDataCard}>
+              <Text style={styles.dataTitle}>Latest Sync</Text>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataIcon}>👟</Text>
+                <Text style={styles.dataLabel}>Steps Today</Text>
+                <Text style={styles.dataValue}>{healthData.steps.toLocaleString()}</Text>
+              </View>
+
+              <View style={styles.dataRow}>
+                <Text style={styles.dataIcon}>😴</Text>
+                <Text style={styles.dataLabel}>Sleep</Text>
+                <Text style={styles.dataValue}>{healthData.sleepHours.toFixed(1)} hrs</Text>
+              </View>
+
+              {healthData.heartRate && (
+                <View style={styles.dataRow}>
+                  <Text style={styles.dataIcon}>❤️</Text>
+                  <Text style={styles.dataLabel}>Heart Rate</Text>
+                  <Text style={styles.dataValue}>{healthData.heartRate} bpm</Text>
+                </View>
+              )}
+
+              <Text style={styles.lastSynced}>
+                Last synced: {new Date(healthData.lastSynced).toLocaleTimeString()}
+              </Text>
+            </View>
+          )}
+
+          {/* Disconnect Option */}
+          <TouchableOpacity
+            style={styles.disconnectBtn}
+            onPress={() => {
+              Alert.alert(
+                'Disconnect',
+                'Are you sure? You\'ll need to enter data manually.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Disconnect',
+                    style: 'destructive',
+                    onPress: async () => {
+                      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+                        healthKitConnected: false,
+                        autoSyncHealth: false,
+                      });
+                      setIsConnected(false);
+                      setAutoSync(false);
+                    },
+                  },
+                ],
+              );
+            }}
+          >
+            <Text style={styles.disconnectBtnText}>Disconnect</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+4.INTEGRATE INTO TRACK SCREEN:
+
+// Update TrackScreen.js to auto-sync
+
+const [healthSyncEnabled, setHealthSyncEnabled] = useState(false);
+
+useEffect(() => {
+  checkHealthSync();
+}, []);
+
+const checkHealthSync = async () => {
+  const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+  const autoSync = userDoc.data().autoSyncHealth || false;
+  setHealthSyncEnabled(autoSync);
+  
+  if (autoSync) {
+    // Auto-fill from health app
+    const data = await syncAllHealthData();
+    if (data) {
+      setSteps(data.steps.toString());
+      setSleepHours(data.sleepHours.toFixed(1));
+    }
+  }
+};
+
+// Add sync button
+<TouchableOpacity
+  style={styles.syncBtn}
+  onPress={async () => {
+    const data = await syncAllHealthData();
+    if (data) {
+      setSteps(data.steps.toString());
+      setSleepHours(data.sleepHours.toFixed(1));
+      Alert.alert('Synced!', 'Health data updated');
+    }
+  }}
+>
+  <Text style={styles.syncBtnText}>🔄 Sync from Health App</Text>
+</TouchableOpacity>
+
+Create complete health app integration with:
+
+Apple Health Kit support
+
+Google Fit support
+
+Auto-sync capability
+
+Manual sync option
+
+Privacy-focused permissions
+
+Real-time data display
+
+Seamless tracking screen integration
+
+
+* COMPLETE BOT ARENA IMPLEMENTATION
+
+Create a fully functional Bot Arena screen with AI opponents of varying difficulty levels. This must be production-ready, not a placeholder.
+
+COMPLETE IMPLEMENTATION:
+
+FILE: /screens/battles/BotArenaScreen.js
+
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, Animated, StyleSheet, Alert, ScrollView } from 'react-native';
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { auth, db } from '../../config/firebase';
+import {
+createBotOpponent,
+calculateDamage,
+checkCriticalHit,
+checkDodge,
+getBotAIStrategy,
+calculateBotRewards,
+} from '../../utils/battleLogic';
+
+export default function BotArenaScreen({ navigation }) {
+// State management
+const [selectedDifficulty, setSelectedDifficulty] = useState('medium');
+const [gameState, setGameState] = useState('setup'); // setup, battle, results
+const [playerPet, setPlayerPet] = useState(null);
+const [botPet, setBotPet] = useState(null);
+const [playerHealth, setPlayerHealth] = useState(100);
+const [botHealth, setBotHealth] = useState(100);
+const [playerTurn, setPlayerTurn] = useState(true);
+const [battleLog, setBattleLog] = useState([]);
+const [userEnergy, setUserEnergy] = useState(100);
+const [botStats, setBotStats] = useState({
+easy: { wins: 0, losses: 0 },
+medium: { wins: 0, losses: 0 },
+hard: { wins: 0, losses: 0 },
+});
+
+// Animations
+const playerShake = useRef(new Animated.Value(0)).current;
+const botShake = useRef(new Animated.Value(0)).current;
+
+useEffect(() => {
+loadUserData();
+}, []);
+
+const loadUserData = async () => {
+try {
+const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+const data = userDoc.data();
+
+  setPlayerPet(data.pets);
+  setUserEnergy(data.energy || 100);
+  setBotStats(data.botBattles || {
+    easy: { wins: 0, losses: 0 },
+    medium: { wins: 0, losses: 0 },
+    hard: { wins: 0, losses: 0 },
+  });
+} catch (error) {
+  console.error('Error loading user data:', error);
+  Alert.alert('Error', 'Failed to load data');
+}
+};
+
+const startBattle = () => {
+if (userEnergy < 10) {
+Alert.alert('Not Enough Energy', 'You need 10 energy to battle. Wait for it to regenerate!');
+return;
+}
+
+// Create bot opponent
+const bot = createBotOpponent(selectedDifficulty, playerPet);
+setBotPet(bot);
+
+// Reset battle state
+setPlayerHealth(100);
+setBotHealth(100);
+setBattleLog([`Battle started against ${bot.name} (${selectedDifficulty})!`]);
+
+// Determine first turn based on agility
+const playerGoesFirst = playerPet.baseStats.agility >= bot.baseStats.agility;
+setPlayerTurn(playerGoesFirst);
+
+if (playerGoesFirst) {
+  addLog('You have first strike!');
+} else {
+  addLog(`${bot.name} has first strike!`);
+  setTimeout(() => botAttack(), 1500);
+}
+
+setGameState('battle');
+
+};
+
+const addLog = (message) => {
+setBattleLog(prev => [message, ...prev].slice(0, 10));
+};
+
+const shakeAnimation = (target) => {
+const anim = target === 'player' ? playerShake : botShake;
+Animated.sequence([
+Animated.timing(anim, { toValue: 10, duration: 50, useNativeDriver: true }),
+Animated.timing(anim, { toValue: -10, duration: 50, useNativeDriver: true }),
+Animated.timing(anim, { toValue: 10, duration: 50, useNativeDriver: true }),
+Animated.timing(anim, { toValue: 0, duration: 50, useNativeDriver: true }),
+]).start();
+};
+
+const playerMove = (moveType) => {
+if (!playerTurn || gameState !== 'battle') return;
+
+setPlayerTurn(false);
+
+if (moveType === 'defend') {
+  addLog('You brace for defense!');
+  setTimeout(() => botAttack(0.5), 1000); // Reduced damage
+  return;
+}
+
+const damage = calculateDamage(playerPet, botPet, moveType);
+const isCrit = checkCriticalHit(playerPet);
+const dodged = checkDodge(botPet);
+
+if (dodged) {
+  addLog('Bot dodged your attack!');
+  setTimeout(() => botAttack(), 1500);
+  return;
+}
+
+const finalDamage = isCrit ? damage * 2 : damage;
+const newBotHealth = Math.max(0, botHealth - finalDamage);
+setBotHealth(newBotHealth);
+shakeAnimation('bot');
+
+const moveText = moveType === 'attack' ? 'attacked' : 'used special move on';
+addLog(
+  `You ${moveText} ${botPet.name} for ${Math.round(finalDamage)} damage!` +
+  (isCrit ? ' CRITICAL HIT!' : '')
+);
+
+if (newBotHealth <= 0) {
+  endBattle('victory');
+  return;
+}
+
+setTimeout(() => botAttack(), 1500);
+
+
+};
+
+const botAttack = (damageMultiplier = 1) => {
+if (gameState !== 'battle') return;
+
+const aiMove = getBotAIStrategy(
+  selectedDifficulty,
+  botHealth,
+  playerHealth,
+  battleLog.length
+);
+
+if (aiMove === 'defend') {
+  addLog(`${botPet.name} defends!`);
+  setPlayerTurn(true);
+  return;
+}
+
+const damage = calculateDamage(botPet, playerPet, aiMove) * damageMultiplier;
+const isCrit = checkCriticalHit(botPet);
+const dodged = checkDodge(playerPet);
+
+if (dodged) {
+  addLog('You dodged the attack!');
+  setPlayerTurn(true);
+  return;
+}
+
+const finalDamage = isCrit ? damage * 2 : damage;
+const newPlayerHealth = Math.max(0, playerHealth - finalDamage);
+setPlayerHealth(newPlayerHealth);
+shakeAnimation('player');
+
+const moveText = aiMove === 'attack' ? 'attacked' : 'used special move on';
+addLog(
+  `${botPet.name} ${moveText} you for ${Math.round(finalDamage)} damage!` +
+  (isCrit ? ' CRITICAL HIT!' : '')
+);
+
+if (newPlayerHealth <= 0) {
+  endBattle('defeat');
+  return;
+}
+
+setPlayerTurn(true);
+};
+
+const endBattle = async (result) => {
+setGameState('results');
+try {
+  const userRef = doc(db, 'users', auth.currentUser.uid);
+  const rewards = calculateBotRewards(selectedDifficulty, result === 'victory');
+
+  // Update stats
+  const statPath = `botBattles.${selectedDifficulty}.${result === 'victory' ? 'wins' : 'losses'}`;
+  
+  await updateDoc(userRef, {
+    gems: increment(rewards.gems),
+    energy: increment(-10),
+    totalXP: increment(rewards.xp),
+    [statPath]: increment(1),
+  });
+
+  // Show results
+  const message = result === 'victory'
+    ? `🎉 VICTORY! 🎉\n\nYou defeated ${botPet.name}!\n\nGems earned: ${rewards.gems} 💎\nXP earned: ${rewards.xp}\nEnergy used: 10 ⚡`
+    : `💔 Defeat\n\n${botPet.name} won the battle.\n\nGems lost: ${Math.abs(rewards.gems)} 💎\nXP earned: ${rewards.xp}\nEnergy used: 10 ⚡`;
+
+  Alert.alert(
+    result === 'victory' ? 'Victory!' : 'Defeat',
+    message,
+    [{ text: 'Continue', onPress: () => loadUserData() }]
+  );
+} catch (error) {
+  console.error('Error ending battle:', error);
+  Alert.alert('Error', 'Failed to save battle results');
+}
+
+};
+
+const resetBattle = () => {
+setGameState('setup');
+setBotPet(null);
+setPlayerHealth(100);
+setBotHealth(100);
+setBattleLog([]);
+setPlayerTurn(true);
+};
+
+if (!playerPet) {
+return (
+<View style={styles.loading}>
+<Text>Loading...</Text>
+</View>
+);
+}
+
+// SETUP SCREEN
+if (gameState === 'setup') {
+return (
+<ScrollView style={styles.container}>
+<View style={styles.header}>
+<Text style={styles.title}>🤖 Bot Arena</Text>
+<Text style={styles.subtitle}>Practice against AI opponents</Text>
+</View>
+
+    <View style={styles.energyDisplay}>
+      <Text style={styles.energyText}>⚡ Energy: {userEnergy}/100</Text>
+    </View>
+
+    {/* Difficulty Selection */}
+    <View style={styles.difficultySection}>
+      <Text style={styles.sectionTitle}>Select Difficulty</Text>
+
+      <TouchableOpacity
+        style={[
+          styles.difficultyCard,
+          selectedDifficulty === 'easy' && styles.difficultyCardSelected
+        ]}
+        onPress={() => setSelectedDifficulty('easy')}
+      >
+        <View style={styles.difficultyHeader}>
+          <Text style={styles.difficultyIcon}>😊</Text>
+          <Text style={styles.difficultyName}>Easy</Text>
+        </View>
+        <Text style={styles.difficultyDesc}>Bot 20% weaker than you</Text>
+        <View style={styles.rewardsRow}>
+          <Text style={styles.rewardText}>💎 Win: 5-8 gems</Text>
+          <Text style={styles.rewardText}>💎 Lose: -3 gems</Text>
+        </View>
+        <View style={styles.statsRow}>
+          <Text style={styles.statsText}>
+            W: {botStats.easy.wins} L: {botStats.easy.losses}
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.difficultyCard,
+          selectedDifficulty === 'medium' && styles.difficultyCardSelected
+        ]}
+        onPress={() => setSelectedDifficulty('medium')}
+      >
+        <View style={styles.difficultyHeader}>
+          <Text style={styles.difficultyIcon}>😐</Text>
+          <Text style={styles.difficultyName}>Medium</Text>
+        </View>
+        <Text style={styles.difficultyDesc}>Bot equal to your level</Text>
+        <View style={styles.rewardsRow}>
+          <Text style={styles.rewardText}>💎 Win: 8-12 gems</Text>
+          <Text style={styles.rewardText}>💎 Lose: -5 gems</Text>
+        </View>
+        <View style={styles.statsRow}>
+          <Text style={styles.statsText}>
+            W: {botStats.medium.wins} L: {botStats.medium.losses}
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.difficultyCard,
+          selectedDifficulty === 'hard' && styles.difficultyCardSelected
+        ]}
+        onPress={() => setSelectedDifficulty('hard')}
+      >
+        <View style={styles.difficultyHeader}>
+          <Text style={styles.difficultyIcon}>😤</Text>
+          <Text style={styles.difficultyName}>Hard</Text>
+        </View>
+        <Text style={styles.difficultyDesc}>Bot 20% stronger than you</Text>
+        <View style={styles.rewardsRow}>
+          <Text style={styles.rewardText}>💎 Win: 12-15 gems</Text>
+          <Text style={styles.rewardText}>💎 Lose: -8 gems</Text>
+        </View>
+        <View style={styles.statsRow}>
+          <Text style={styles.statsText}>
+            W: {botStats.hard.wins} L: {botStats.hard.losses}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+
+    {/* Battle Info */}
+    <View style={styles.infoCard}>
+      <Text style={styles.infoTitle}>ℹ️ Battle Info</Text>
+      <Text style={styles.infoText}>-  Costs 10 energy per battle</Text>
+      <Text style={styles.infoText}>-  Win bonus: +50 XP</Text>
+      <Text style={styles.infoText}>-  Lower stakes than PvP</Text>
+      <Text style={styles.infoText}>-  Great for practice!</Text>
+    </View>
+
+    <TouchableOpacity
+      style={styles.startBtn}
+      onPress={startBattle}
+      disabled={userEnergy < 10}
+    >
+      <Text style={styles.startBtnText}>
+        {userEnergy < 10 ? 'Not Enough Energy' : '⚔️ Start Battle (10⚡)'}
+      </Text>
+    </TouchableOpacity>
+  </ScrollView>
+);
+
+
+}
+
+// BATTLE SCREEN
+if (gameState === 'battle') {
+const healthPercentage = (health) => Math.max(0, health);
+
+return (
+  <View style={styles.battleContainer}>
+    {/* Bot Pet */}
+    <Animated.View 
+      style={[
+        styles.petContainer,
+        styles.botContainer,
+        { transform: [{ translateX: botShake }] }
+      ]}
+    >
+      <Text style={styles.petName}>{botPet.name}</Text>
+      <Text style={styles.petLevel}>Lv. {botPet.level}</Text>
+      <View style={styles.petPlaceholder}>
+        <Text style={styles.petEmoji}>🤖</Text>
+      </View>
+      <View style={styles.healthBarContainer}>
+        <View 
+          style={[
+            styles.healthBar,
+            { width: `${healthPercentage(botHealth)}%` },
+            botHealth < 30 && styles.healthBarLow
+          ]}
+        />
+      </View>
+      <Text style={styles.healthText}>{Math.round(botHealth)}/100 HP</Text>
+    </Animated.View>
+
+    {/* Battle Log */}
+    <View style={styles.battleLogContainer}>
+      {battleLog.slice(0, 3).map((log, index) => (
+        <Text key={index} style={styles.logText}>{log}</Text>
+      ))}
+    </View>
+
+    {/* Player Pet */}
+    <Animated.View 
+      style={[
+        styles.petContainer,
+        styles.playerContainer,
+        { transform: [{ translateX: playerShake }] }
+      ]}
+    >
+      <Text style={styles.petName}>{playerPet.name}</Text>
+      <Text style={styles.petLevel}>Lv. {playerPet.level}</Text>
+      <View style={styles.petPlaceholder}>
+        <Text style={styles.petEmoji}>🐾</Text>
+      </View>
+      <View style={styles.healthBarContainer}>
+        <View 
+          style={[
+            styles.healthBar,
+            { width: `${healthPercentage(playerHealth)}%` },
+            playerHealth < 30 && styles.healthBarLow
+          ]}
+        />
+      </View>
+      <Text style={styles.healthText}>{Math.round(playerHealth)}/100 HP</Text>
+    </Animated.View>
+
+    {/* Battle Controls */}
+    <View style={styles.controls}>
+      <TouchableOpacity
+        style={[styles.moveBtn, !playerTurn && styles.moveBtnDisabled]}
+        onPress={() => playerMove('attack')}
+        disabled={!playerTurn}
+      >
+        <Text style={styles.moveBtnText}>⚔️ Attack</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.moveBtn, styles.defendBtn, !playerTurn && styles.moveBtnDisabled]}
+        onPress={() => playerMove('defend')}
+        disabled={!playerTurn}
+      >
+        <Text style={styles.moveBtnText}>🛡️ Defend</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.moveBtn, styles.specialBtn, !playerTurn && styles.moveBtnDisabled]}
+        onPress={() => playerMove('special')}
+        disabled={!playerTurn}
+      >
+        <Text style={styles.moveBtnText}>✨ Special</Text>
+      </TouchableOpacity>
+    </View>
+
+    {!playerTurn && (
+      <Text style={styles.waitingText}>Bot's turn...</Text>
+    )}
+  </View>
+);
+
+
+}
+
+// RESULTS SCREEN (handled by Alert, returns to setup)
+return null;
+}
+
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: '#F5F5F5',
+},
+loading: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+},
+header: {
+backgroundColor: '#5D9CEC',
+padding: 30,
+alignItems: 'center',
+},
+title: {
+fontSize: 28,
+fontWeight: 'bold',
+color: 'white',
+marginBottom: 5,
+},
+subtitle: {
+fontSize: 16,
+color: 'rgba(255,255,255,0.9)',
+},
+energyDisplay: {
+backgroundColor: 'white',
+marginHorizontal: 20,
+marginTop: -15,
+padding: 12,
+borderRadius: 10,
+alignItems: 'center',
+shadowColor: '#000',
+shadowOffset: { width: 0, height: 2 },
+shadowOpacity: 0.1,
+shadowRadius: 4,
+elevation: 3,
+},
+energyText: {
+fontSize: 16,
+fontWeight: 'bold',
+color: '#333',
+},
+difficultySection: {
+padding: 20,
+},
+sectionTitle: {
+fontSize: 20,
+fontWeight: 'bold',
+marginBottom: 15,
+color: '#333',
+},
+difficultyCard: {
+backgroundColor: 'white',
+borderRadius: 12,
+padding: 15,
+marginBottom: 12,
+borderWidth: 2,
+borderColor: 'transparent',
+},
+difficultyCardSelected: {
+borderColor: '#5D9CEC',
+backgroundColor: '#F0F7FF',
+},
+difficultyHeader: {
+flexDirection: 'row',
+alignItems: 'center',
+marginBottom: 8,
+},
+difficultyIcon: {
+fontSize: 24,
+marginRight: 10,
+},
+difficultyName: {
+fontSize: 18,
+fontWeight: 'bold',
+color: '#333',
+},
+difficultyDesc: {
+fontSize: 14,
+color: '#666',
+marginBottom: 10,
+},
+rewardsRow: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+marginBottom: 8,
+},
+rewardText: {
+fontSize: 12,
+color: '#32808D',
+fontWeight: '600',
+},
+statsRow: {
+borderTopWidth: 1,
+borderTopColor: '#E0E0E0',
+paddingTop: 8,
+},
+statsText: {
+fontSize: 12,
+color: '#666',
+},
+infoCard: {
+backgroundColor: 'white',
+margin: 20,
+padding: 15,
+borderRadius: 10,
+},
+infoTitle: {
+fontSize: 16,
+fontWeight: 'bold',
+marginBottom: 10,
+color: '#333',
+},
+infoText: {
+fontSize: 14,
+color: '#666',
+marginBottom: 5,
+},
+startBtn: {
+backgroundColor: '#5D9CEC',
+marginHorizontal: 20,
+marginBottom: 30,
+padding: 18,
+borderRadius: 10,
+alignItems: 'center',
+},
+startBtnText: {
+color: 'white',
+fontSize: 18,
+fontWeight: 'bold',
+},
+
+// Battle Screen Styles
+battleContainer: {
+flex: 1,
+backgroundColor: '#F5F5F5',
+},
+petContainer: {
+alignItems: 'center',
+padding: 20,
+},
+botContainer: {
+backgroundColor: '#FFE5E5',
+},
+playerContainer: {
+backgroundColor: '#E5F5FF',
+},
+petName: {
+fontSize: 20,
+fontWeight: 'bold',
+color: '#333',
+},
+petLevel: {
+fontSize: 14,
+color: '#666',
+marginBottom: 10,
+},
+petPlaceholder: {
+width: 100,
+height: 100,
+backgroundColor: 'rgba(255,255,255,0.5)',
+borderRadius: 50,
+justifyContent: 'center',
+alignItems: 'center',
+marginBottom: 10,
+},
+petEmoji: {
+fontSize: 50,
+},
+healthBarContainer: {
+width: '80%',
+height: 20,
+backgroundColor: '#DDD',
+borderRadius: 10,
+overflow: 'hidden',
+marginBottom: 5,
+},
+healthBar: {
+height: '100%',
+backgroundColor: '#4CAF50',
+},
+healthBarLow: {
+backgroundColor: '#FF5252',
+},
+healthText: {
+fontSize: 14,
+fontWeight: 'bold',
+color: '#333',
+},
+battleLogContainer: {
+backgroundColor: 'white',
+padding: 15,
+marginHorizontal: 20,
+borderRadius: 10,
+minHeight: 80,
+},
+logText: {
+fontSize: 12,
+color: '#666',
+marginBottom: 5,
+},
+controls: {
+flexDirection: 'row',
+justifyContent: 'space-around',
+padding: 20,
+},
+moveBtn: {
+backgroundColor: '#32808D',
+paddingVertical: 15,
+paddingHorizontal: 20,
+borderRadius: 10,
+minWidth: 100,
+alignItems: 'center',
+},
+defendBtn: {
+backgroundColor: '#5D9CEC',
+},
+specialBtn: {
+backgroundColor: '#A463BF',
+},
+moveBtnDisabled: {
+backgroundColor: '#CCC',
+opacity: 0.5,
+},
+moveBtnText: {
+color: 'white',
+fontSize: 14,
+fontWeight: 'bold',
+},
+waitingText: {
+textAlign: 'center',
+fontSize: 16,
+color: '#666',
+fontStyle: 'italic',
+},
+});
+
+
+*COMPLETE PET RUNNER GAME
+
+Create a fully functional endless runner game (Chrome dinosaur style) where the pet jumps over obstacles. This must be production-ready and playable immediately.
+
+COMPLETE IMPLEMENTATION:
+
+FILE: /screens/battles/RunnerGameScreen.js
+
+
+import React, { useState, useEffect, useRef } from 'react';
+import {
+View,
+Text,
+TouchableOpacity,
+Animated,
+StyleSheet,
+Alert,
+Dimensions,
+Modal,
+} from 'react-native';
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { auth, db } from '../../config/firebase';
+import { checkDailyLimit, calculateRunnerReward } from '../../utils/runnerRewards';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const GROUND_HEIGHT = 150;
+const PET_SIZE = 60;
+const OBSTACLE_WIDTH = 40;
+const JUMP_HEIGHT = 120;
+const GRAVITY = 1200;
+const INITIAL_SPEED = 300;
+
+export default function RunnerGameScreen({ navigation }) {
+// Game state
+const [gameState, setGameState] = useState('ready'); // ready, playing, gameOver
+const [score, setScore] = useState(0);
+const [highScore, setHighScore] = useState(0);
+const [speed, setSpeed] = useState(INITIAL_SPEED);
+const [obstacles, setObstacles] = useState([]);
+const [userEnergy, setUserEnergy] = useState(100);
+const [dailyGems, setDailyGems] = useState(0);
+const [petAgility, setPetAgility] = useState(70);
+
+// Animations
+const petY = useRef(new Animated.Value(0)).current;
+const isJumping = useRef(false);
+const gameLoop = useRef(null);
+const obstacleSpawnTimer = useRef(null);
+const lastFrameTime = useRef(Date.now());
+
+useEffect(() => {
+loadGameData();
+return () => {
+if (gameLoop.current) clearInterval(gameLoop.current);
+if (obstacleSpawnTimer.current) clearInterval(obstacleSpawnTimer.current);
+};
+}, []);
+
+const loadGameData = async () => {
+try {
+const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+const data = userDoc.data();
+  setHighScore(data.runnerBestScore || 0);
+  setUserEnergy(data.energy || 100);
+  setDailyGems(data.runnerDailyGems || 0);
+  setPetAgility(data.pets?.baseStats.agility || 70);
+} catch (error) {
+  console.error('Error loading game data:', error);
+}
+
+};
+
+const startGame = () => {
+if (userEnergy < 5) {
+Alert.alert('Not Enough Energy', 'You need 5 energy to play. Wait for it to regenerate!');
+return;
+}
+// Reset game state
+setScore(0);
+setSpeed(INITIAL_SPEED);
+setObstacles([]);
+petY.setValue(0);
+isJumping.current = false;
+lastFrameTime.current = Date.now();
+
+setGameState('playing');
+
+// Start game loop
+gameLoop.current = setInterval(updateGame, 16); // ~60 FPS
+
+// Start spawning obstacles
+spawnObstacle();
+obstacleSpawnTimer.current = setInterval(spawnObstacle, 2000);
+
+};
+
+const spawnObstacle = () => {
+const types = [
+{ height: 40, width: 30, type: 'low', icon: '🪨' },
+{ height: 60, width: 35, type: 'medium', icon: '🌵' },
+{ height: 50, width: 40, type: 'wide', icon: '⛰️' },
+];
+
+const obstacleType = types[Math.floor(Math.random() * types.length)];
+
+setObstacles(prev => [...prev, {
+  id: Date.now(),
+  x: SCREEN_WIDTH,
+  ...obstacleType,
+}]);
+
+};
+
+const updateGame = () => {
+const now = Date.now();
+const deltaTime = (now - lastFrameTime.current) / 1000;
+lastFrameTime.current = now;
+
+// Move obstacles
+setObstacles(prev => {
+  const updated = prev.map(obs => ({
+    ...obs,
+    x: obs.x - speed * deltaTime,
+  })).filter(obs => obs.x > -OBSTACLE_WIDTH);
+
+  // Check collision
+  updated.forEach(obs => {
+    if (checkCollision(obs)) {
+      endGame();
+    }
+  });
+
+  return updated;
+});
+
+// Increase score
+setScore(prev => {
+  const newScore = prev + deltaTime * 10;
+  
+  // Increase speed every 100 points
+  if (Math.floor(newScore / 100) > Math.floor(prev / 100)) {
+    setSpeed(s => Math.min(s + 30, 600));
+  }
+  
+  return newScore;
+});
+
+};
+
+const checkCollision = (obstacle) => {
+const petBottom = GROUND_HEIGHT - petY._value;
+const petTop = petBottom - PET_SIZE;
+const petLeft = 50;
+const petRight = petLeft + PET_SIZE;
+
+const obsLeft = obstacle.x;
+const obsRight = obstacle.x + obstacle.width;
+const obsTop = GROUND_HEIGHT - obstacle.height;
+const obsBottom = GROUND_HEIGHT;
+
+// Check overlap
+const overlap = 
+  petRight > obsLeft &&
+  petLeft < obsRight &&
+  petBottom > obsTop &&
+  petTop < obsBottom;
+
+return overlap;
+};
+
+const jump = () => {
+if (isJumping.current || gameState !== 'playing') return;
+
+isJumping.current = true;
+
+// Jump height affected by pet agility
+const jumpBoost = (petAgility / 100) * 30; // 0-30 extra height
+const totalJumpHeight = JUMP_HEIGHT + jumpBoost;
+
+Animated.sequence([
+  Animated.timing(petY, {
+    toValue: totalJumpHeight,
+    duration: 350,
+    useNativeDriver: true,
+  }),
+  Animated.timing(petY, {
+    toValue: 0,
+    duration: 350,
+    useNativeDriver: true,
+  }),
+]).start(() => {
+  isJumping.current = false;
+});
+
+
+};
+
+const endGame = async () => {
+setGameState('gameOver');
+
+if (gameLoop.current) clearInterval(gameLoop.current);
+if (obstacleSpawnTimer.current) clearInterval(obstacleSpawnTimer.current);
+
+const finalScore = Math.floor(score);
+
+try {
+  // Deduct energy
+  await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+    energy: increment(-5),
+  });
+
+  // Calculate and award gems
+  const rewardResult = await calculateRunnerReward(auth.currentUser.uid, finalScore);
+
+  // Update high score if beaten
+  if (finalScore > highScore) {
+    setHighScore(finalScore);
+  }
+
+  // Show results
+  showResults(finalScore, rewardResult);
+} catch (error) {
+  console.error('Error ending game:', error);
+  Alert.alert('Error', 'Failed to save game results');
+}
+
+};
+
+const showResults = (finalScore, rewardResult) => {
+let message = Score: ${finalScore}\n\n;
+
+if (rewardResult.limitReached) {
+  message += `⚠️ Daily gem limit reached (50/50)\n\nCome back tomorrow for more gems!`;
+} else {
+  message += `💎 Gems earned: ${rewardResult.gems}\n`;
+  message += `📊 Daily total: ${dailyGems + rewardResult.gems}/50\n\n`;
+  
+  if (rewardResult.isNewHighScore) {
+    message += `🎉 NEW HIGH SCORE! 🎉`;
+  }
+}
+
+Alert.alert(
+  'Game Over!',
+  message,
+  [
+    { text: 'Back to Menu', onPress: () => navigation.goBack() },
+    { text: 'Play Again', onPress: () => {
+      loadGameData();
+      setGameState('ready');
+    }},
+  ]
+);
+
+
+};
+
+// READY SCREEN
+if (gameState === 'ready') {
+return (
+<View style={styles.container}>
+<View style={styles.header}>
+<Text style={styles.title}>🏃 Pet Runner</Text>
+<Text style={styles.subtitle}>Endless obstacle course</Text>
+</View>
+
+    <View style={styles.infoCard}>
+      <Text style={styles.infoTitle}>How to Play</Text>
+      <Text style={styles.infoText}>-  Tap anywhere to jump</Text>
+      <Text style={styles.infoText}>-  Avoid obstacles</Text>
+      <Text style={styles.infoText}>-  Game speeds up over time</Text>
+      <Text style={styles.infoText}>-  Earn 1 gem per 10 points</Text>
+      <Text style={styles.infoText}>-  Bonus at 50+ points!</Text>
+    </View>
+
+    <View style={styles.statsCard}>
+      <View style={styles.statRow}>
+        <Text style={styles.statLabel}>⚡ Energy Cost</Text>
+        <Text style={styles.statValue}>5</Text>
+      </View>
+      <View style={styles.statRow}>
+        <Text style={styles.statLabel}>🏆 High Score</Text>
+        <Text style={styles.statValue}>{highScore}</Text>
+      </View>
+      <View style={styles.statRow}>
+        <Text style={styles.statLabel}>💎 Today's Gems</Text>
+        <Text style={styles.statValue}>{dailyGems}/50</Text>
+      </View>
+      <View style={styles.statRow}>
+        <Text style={styles.statLabel}>⚡ Current Energy</Text>
+        <Text style={styles.statValue}>{userEnergy}/100</Text>
+      </View>
+    </View>
+
+    <View style={styles.agilityCard}>
+      <Text style={styles.agilityText}>
+        🦘 Your pet's agility: {petAgility}
+      </Text>
+      <Text style={styles.agilityDesc}>
+        Higher agility = higher jumps!
+      </Text>
+    </View>
+
+    <TouchableOpacity
+      style={[styles.startBtn, userEnergy < 5 && styles.startBtnDisabled]}
+      onPress={startGame}
+      disabled={userEnergy < 5}
+    >
+      <Text style={styles.startBtnText}>
+        {userEnergy < 5 ? 'Not Enough Energy' : '▶️ Start Game'}
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.backBtn}
+      onPress={() => navigation.goBack()}
+    >
+      <Text style={styles.backBtnText}>← Back to Battle Modes</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+}
+
+// GAME SCREEN
+return (
+<TouchableOpacity style={styles.gameContainer} activeOpacity={1} onPress={jump} >
+{/* Sky Background */}
+<View style={styles.sky}>
+<Text style={styles.scoreDisplay}>Score: {Math.floor(score)}</Text>
+</View>
+
+  {/* Ground */}
+  <View style={[styles.ground, { bottom: 0, height: GROUND_HEIGHT }]}>
+    <View style={styles.groundLine} />
+    
+    {/* Pet */}
+    <Animated.View
+      style={[
+        styles.pet,
+        {
+          bottom: petY,
+          left: 50,
+        },
+      ]}
+    >
+      <Text style={styles.petIcon}>🐾</Text>
+    </Animated.View>
+
+    {/* Obstacles */}
+    {obstacles.map(obstacle => (
+      <View
+        key={obstacle.id}
+        style={[
+          styles.obstacle,
+          {
+            left: obstacle.x,
+            bottom: 0,
+            width: obstacle.width,
+            height: obstacle.height,
+          },
+        ]}
+      >
+        <Text style={styles.obstacleIcon}>{obstacle.icon}</Text>
+      </View>
+    ))}
+  </View>
+
+  {/* Instructions */}
+  <View style={styles.instructions}>
+    <Text style={styles.instructionText}>👆 TAP TO JUMP</Text>
+  </View>
+</TouchableOpacity>
+
+);
+}
+
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: '#F5F5F5',
+},
+header: {
+backgroundColor: '#A463BF',
+padding: 30,
+alignItems: 'center',
+},
+title: {
+fontSize: 28,
+fontWeight: 'bold',
+color: 'white',
+marginBottom: 5,
+},
+subtitle: {
+fontSize: 16,
+color: 'rgba(255,255,255,0.9)',
+},
+infoCard: {
+backgroundColor: 'white',
+margin: 20,
+padding: 20,
+borderRadius: 12,
+shadowColor: '#000',
+shadowOffset: { width: 0, height: 2 },
+shadowOpacity: 0.1,
+shadowRadius: 4,
+elevation: 3,
+},
+infoTitle: {
+fontSize: 18,
+fontWeight: 'bold',
+marginBottom: 12,
+color: '#333',
+},
+infoText: {
+fontSize: 14,
+color: '#666',
+marginBottom: 6,
+},
+statsCard: {
+backgroundColor: 'white',
+marginHorizontal: 20,
+marginBottom: 20,
+padding: 15,
+borderRadius: 12,
+},
+statRow: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+paddingVertical: 10,
+borderBottomWidth: 1,
+borderBottomColor: '#F0F0F0',
+},
+statLabel: {
+fontSize: 14,
+color: '#666',
+},
+statValue: {
+fontSize: 14,
+fontWeight: 'bold',
+color: '#A463BF',
+},
+agilityCard: {
+backgroundColor: '#F0E6FF',
+marginHorizontal: 20,
+marginBottom: 20,
+padding: 15,
+borderRadius: 12,
+alignItems: 'center',
+},
+agilityText: {
+fontSize: 16,
+fontWeight: 'bold',
+color: '#A463BF',
+marginBottom: 5,
+},
+agilityDesc: {
+fontSize: 12,
+color: '#666',
+},
+startBtn: {
+backgroundColor: '#A463BF',
+marginHorizontal: 20,
+marginBottom: 15,
+padding: 18,
+borderRadius: 12,
+alignItems: 'center',
+},
+startBtnDisabled: {
+backgroundColor: '#CCC',
+},
+startBtnText: {
+color: 'white',
+fontSize: 18,
+fontWeight: 'bold',
+},
+backBtn: {
+marginHorizontal: 20,
+marginBottom: 30,
+padding: 15,
+alignItems: 'center',
+},
+backBtnText: {
+color: '#A463BF',
+fontSize: 16,
+},
+
+// Game Screen Styles
+gameContainer: {
+flex: 1,
+backgroundColor: '#87CEEB', // Sky blue
+},
+sky: {
+flex: 1,
+justifyContent: 'flex-start',
+alignItems: 'center',
+paddingTop: 40,
+},
+scoreDisplay: {
+fontSize: 32,
+fontWeight: 'bold',
+color: 'white',
+textShadowColor: 'rgba(0, 0, 0, 0.3)',
+textShadowOffset: { width: 2, height: 2 },
+textShadowRadius: 4,
+},
+ground: {
+position: 'absolute',
+width: '100%',
+backgroundColor: '#8B7355',
+},
+groundLine: {
+position: 'absolute',
+top: 0,
+width: '100%',
+height: 3,
+backgroundColor: '#654321',
+},
+pet: {
+position: 'absolute',
+width: PET_SIZE,
+height: PET_SIZE,
+justifyContent: 'center',
+alignItems: 'center',
+},
+petIcon: {
+fontSize: 50,
+},
+obstacle: {
+position: 'absolute',
+justifyContent: 'center',
+alignItems: 'center',
+},
+obstacleIcon: {
+fontSize: 35,
+},
+instructions: {
+position: 'absolute',
+bottom: GROUND_HEIGHT + 20,
+width: '100%',
+alignItems: 'center',
+},
+instructionText: {
+fontSize: 24,
+fontWeight: 'bold',
+color: 'white',
+textShadowColor: 'rgba(0, 0, 0, 0.5)',
+textShadowOffset: { width: 2, height: 2 },
+textShadowRadius: 4,
+},
+});
+
+
+Now create the rewards calculator:
+
+FILE: /utils/runnerRewards.js
+
+
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { db } from '../config/firebase';
+
+const DAILY_GEM_LIMIT = 50;
+const GEMS_PER_10_POINTS = 1;
+const BONUS_GEMS_AT_50_POINTS = 5;
+
+export const checkDailyLimit = async (userId) => {
+const userRef = doc(db, 'users', userId);
+const userDoc = await getDoc(userRef);
+const data = userDoc.data();
+
+const today = new Date().toDateString();
+const lastPlayed = data.runnerLastPlayedDate?.toDate().toDateString();
+
+// Reset if new day
+if (lastPlayed !== today) {
+await updateDoc(userRef, {
+runnerDailyGems: 0,
+runnerLastPlayedDate: new Date(),
+});
+return { canEarn: true, currentDaily: 0, remaining: DAILY_GEM_LIMIT };
+}
+
+const currentDaily = data.runnerDailyGems || 0;
+const canEarn = currentDaily < DAILY_GEM_LIMIT;
+
+return {
+canEarn,
+currentDaily,
+remaining: DAILY_GEM_LIMIT - currentDaily
+};
+};
+
+export const calculateRunnerReward = async (userId, score) => {
+const limitCheck = await checkDailyLimit(userId);
+
+if (!limitCheck.canEarn) {
+return {
+gems: 0,
+message: 'Daily gem limit reached! Come back tomorrow.',
+limitReached: true,
+isNewHighScore: false,
+remaining: 0,
+};
+}
+
+// Calculate gems from score
+let baseGems = Math.floor(score / 10) * GEMS_PER_10_POINTS;
+
+// Bonus for 50+ score
+if (score >= 50) {
+baseGems += BONUS_GEMS_AT_50_POINTS;
+}
+
+// Cap at remaining daily limit
+const gemsToAward = Math.min(baseGems, limitCheck.remaining);
+
+// Update Firebase
+const userRef = doc(db, 'users', userId);
+await updateDoc(userRef, {
+gems: increment(gemsToAward),
+runnerDailyGems: increment(gemsToAward),
+runnerTotalGames: increment(1),
+});
+
+// Check high score
+const userDoc = await getDoc(userRef);
+const currentBest = userDoc.data().runnerBestScore || 0;
+const isNewHighScore = score > currentBest;
+
+if (isNewHighScore) {
+await updateDoc(userRef, {
+runnerBestScore: score,
+});
+}
+
+return {
+gems: gemsToAward,
+message: You earned ${gemsToAward} gems!,
+limitReached: false,
+isNewHighScore,
+remaining: limitCheck.remaining - gemsToAward,
+};
+};
+

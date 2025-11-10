@@ -14,6 +14,7 @@ const KEYS = {
   PET_SLOTS: '@petfit_pet_slots',
   LEADERBOARD_DATA: '@petfit_leaderboard',
   WEEKLY_STREAK: '@petfit_weekly_streak',
+  PROFILE_DATA: '@petfit_profile',
 };
 
 // User storage
@@ -331,5 +332,43 @@ export const updateLeaderboardStats = async (xpGained) => {
     return data;
   } catch (error) {
     console.error('Error updating leaderboard stats:', error);
+  }
+};
+
+export const saveProfileData = async (profileData) => {
+  try {
+    await AsyncStorage.setItem(KEYS.PROFILE_DATA, JSON.stringify(profileData));
+  } catch (error) {
+    console.error('Error saving profile data:', error);
+  }
+};
+
+export const getProfileData = async () => {
+  try {
+    const data = await AsyncStorage.getItem(KEYS.PROFILE_DATA);
+    return data ? JSON.parse(data) : {
+      displayName: '',
+      bio: '',
+      phoneNumber: '',
+      photoURL: null,
+      socialMedia: {
+        instagram: '',
+        twitter: '',
+        facebook: '',
+      },
+    };
+  } catch (error) {
+    console.error('Error getting profile data:', error);
+    return {
+      displayName: '',
+      bio: '',
+      phoneNumber: '',
+      photoURL: null,
+      socialMedia: {
+        instagram: '',
+        twitter: '',
+        facebook: '',
+      },
+    };
   }
 };

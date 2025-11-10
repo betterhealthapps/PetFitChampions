@@ -1,12 +1,27 @@
-import React, { useContext } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useContext, useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, Alert, Image } from 'react-native';
 import { Card, Title, Text, Button, List } from 'react-native-paper';
 import { AuthContext } from '../context/AuthContext';
 import { PetContext } from '../context/PetContext';
+import { getProfileData } from '../utils/storage';
 
 export default function ProfileScreen({ navigation }) {
   const { user, logout } = useContext(AuthContext);
   const { pet, gems } = useContext(PetContext);
+  const [profileData, setProfileData] = useState(null);
+
+  useEffect(() => {
+    loadProfile();
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadProfile();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadProfile = async () => {
+    const data = await getProfileData();
+    setProfileData(data);
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -37,11 +52,35 @@ export default function ProfileScreen({ navigation }) {
         {/* User Info Card */}
         <Card style={styles.card}>
           <Card.Content>
-            <Title style={styles.username}>{user.username}</Title>
-            <Text style={styles.email}>{user.email}</Text>
-            <Text style={styles.memberSince}>
-              Member since {new Date(user.createdAt).toLocaleDateString()}
-            </Text>
+            <View style={styles.profileHeader}>
+              {profileData?.photoURL ? (
+                <Image source={{ uri: profileData.photoURL }} style={styles.profilePhoto} />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Text style={styles.photoPlaceholderText}>
+                    {user?.username?.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.profileInfo}>
+                <Title style={styles.username}>{profileData?.displayName || user.username}</Title>
+                {profileData?.bio ? (
+                  <Text style={styles.bio}>{profileData.bio}</Text>
+                ) : null}
+                <Text style={styles.email}>{user.email}</Text>
+                <Text style={styles.memberSince}>
+                  Member since {new Date(user.createdAt).toLocaleDateString()}
+                </Text>
+              </View>
+            </View>
+            <Button 
+              mode="contained" 
+              onPress={() => navigation.navigate('ProfileEdit')}
+              style={styles.editButton}
+              icon="pencil"
+            >
+              Edit Profile
+            </Button>
           </Card.Content>
         </Card>
 
@@ -149,21 +188,56 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 16,
   },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  profilePhoto: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 16,
+  },
+  photoPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#5EB8C6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  photoPlaceholderText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  profileInfo: {
+    flex: 1,
+  },
   username: {
-    fontSize: 28,
-    textAlign: 'center',
+    fontSize: 24,
     marginBottom: 4,
   },
-  email: {
-    fontSize: 16,
-    textAlign: 'center',
+  bio: {
+    fontSize: 14,
     color: '#666',
     marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  email: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
   },
   memberSince: {
-    fontSize: 14,
-    textAlign: 'center',
+    fontSize: 12,
     color: '#888',
+  },
+  editButton: {
+    backgroundColor: '#32808D',
+    marginTop: 8,
   },
   sectionTitle: {
     fontSize: 20,
