@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import { Card, Title, Text, TextInput, Button, IconButton, Chip } from 'react-native-paper';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { Card, Title, Text, Button, IconButton, Chip, Snackbar } from 'react-native-paper';
+import Slider from '@react-native-community/slider';
 import { HealthContext } from '../context/HealthContext';
 import { PetContext } from '../context/PetContext';
 import { MOOD_OPTIONS, MEAL_QUALITY } from '../data/constants';
@@ -9,35 +10,47 @@ export default function TrackScreen() {
   const { todayLog, updateActivity, getTodayXP } = useContext(HealthContext);
   const { addXP } = useContext(PetContext);
   
-  const [steps, setSteps] = useState('0');
-  const [sleepHours, setSleepHours] = useState('0');
+  const [steps, setSteps] = useState(0);
+  const [sleepHours, setSleepHours] = useState(0);
   const [waterGlasses, setWaterGlasses] = useState(0);
   const [meditationMinutes, setMeditationMinutes] = useState(0);
   const [meditationTimer, setMeditationTimer] = useState(null);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   useEffect(() => {
     if (todayLog) {
-      setSteps(todayLog.steps.toString());
-      setSleepHours(todayLog.sleepHours.toString());
+      setSteps(todayLog.steps || 0);
+      setSleepHours(todayLog.sleepHours || 0);
       setWaterGlasses(todayLog.waterGlasses || 0);
       setMeditationMinutes(todayLog.meditationMinutes || 0);
     }
   }, [todayLog]);
 
-  const handleSaveSteps = async () => {
-    await updateActivity('steps', parseInt(steps) || 0);
-    Alert.alert('Success', 'Steps logged!');
+  const showToast = (message) => {
+    setSnackbarMessage(message);
+    setSnackbarVisible(true);
   };
 
-  const handleSaveSleep = async () => {
-    await updateActivity('sleepHours', parseFloat(sleepHours) || 0);
-    Alert.alert('Success', 'Sleep hours logged!');
+  const handleStepsIncrement = async (amount) => {
+    const newSteps = Math.max(0, steps + amount);
+    setSteps(newSteps);
+    await updateActivity('steps', newSteps);
+    showToast(`Steps updated: ${newSteps.toLocaleString()}`);
+  };
+
+  const handleSleepChange = async (value) => {
+    const rounded = Math.round(value * 2) / 2; // Round to nearest 0.5
+    setSleepHours(rounded);
+    await updateActivity('sleepHours', rounded);
+    showToast(`Sleep updated: ${rounded} hours`);
   };
 
   const handleAddWater = async () => {
     const newCount = waterGlasses + 1;
     setWaterGlasses(newCount);
     await updateActivity('waterGlasses', newCount);
+    showToast(`Water logged: ${newCount} glasses`);
   };
 
   const handleRemoveWater = async () => {
@@ -45,6 +58,7 @@ export default function TrackScreen() {
       const newCount = waterGlasses - 1;
       setWaterGlasses(newCount);
       await updateActivity('waterGlasses', newCount);
+      showToast(`Water updated: ${newCount} glasses`);
     }
   };
 
@@ -52,14 +66,14 @@ export default function TrackScreen() {
     const currentMoods = todayLog?.moodCheckIns || [];
     const newMoods = [...currentMoods, { emoji: mood.emoji, time: new Date().toISOString() }];
     await updateActivity('moodCheckIns', newMoods);
-    Alert.alert('Success', `Mood logged: ${mood.emoji}`);
+    showToast(`Mood logged: ${mood.emoji}`);
   };
 
   const handleLogMeal = async (quality) => {
     const currentMeals = todayLog?.meals || [];
     const newMeals = [...currentMeals, quality];
     await updateActivity('meals', newMeals);
-    Alert.alert('Success', `${quality} meal logged!`);
+    showToast(`${quality} meal logged!`);
   };
 
   const startMeditation = () => {
@@ -74,37 +88,34 @@ export default function TrackScreen() {
       clearInterval(meditationTimer);
       setMeditationTimer(null);
       await updateActivity('meditationMinutes', meditationMinutes);
-      Alert.alert('Success', `${meditationMinutes} minutes of meditation logged!`);
+      showToast(`${meditationMinutes} minutes of meditation logged!`);
     }
   };
 
   const handleJournalEntry = async () => {
     await updateActivity('hasJournal', true);
-    Alert.alert('Success', 'Journal entry logged!');
+    showToast('Journal entry logged!');
   };
 
   const handleBreathingExercise = async () => {
     const currentCount = todayLog?.breathingExercises || 0;
     await updateActivity('breathingExercises', currentCount + 1);
-    Alert.alert('Success', 'Breathing exercise completed!');
+    showToast('Breathing exercise completed!');
   };
 
   const handleClaimXP = async () => {
     const xpToAdd = getTodayXP();
     if (xpToAdd === 0) {
-      Alert.alert('No XP', 'Complete some activities first!');
+      showToast('Complete some activities first!');
       return;
     }
 
     const result = await addXP(xpToAdd);
     
     if (result.leveledUp) {
-      Alert.alert(
-        '🎉 Level Up!',
-        `Your pet reached level ${result.newLevel} and earned ${result.gemsEarned} gems!`
-      );
+      showToast(`🎉 Level Up! Reached level ${result.newLevel} and earned ${result.gemsEarned} gems!`);
     } else {
-      Alert.alert('XP Added', `+${xpToAdd} XP earned today!`);
+      showToast(`+${xpToAdd} XP earned today! 🌟`);
     }
   };
 
@@ -117,17 +128,46 @@ export default function TrackScreen() {
         <Card style={styles.card}>
           <Card.Content>
             <Text style={styles.cardTitle}>🚶 Steps</Text>
-            <TextInput
-              label="Steps taken today"
-              value={steps}
-              onChangeText={setSteps}
-              keyboardType="numeric"
-              mode="outlined"
-              style={styles.input}
-            />
-            <Button mode="contained" onPress={handleSaveSteps}>
-              Save Steps
-            </Button>
+            <View style={styles.stepsContainer}>
+              <IconButton 
+                icon="minus-circle" 
+                size={36}
+                onPress={() => handleStepsIncrement(-1000)}
+              />
+              <View style={styles.stepsDisplay}>
+                <Text style={styles.stepsNumber}>{steps.toLocaleString()}</Text>
+                <Text style={styles.stepsLabel}>steps</Text>
+              </View>
+              <IconButton 
+                icon="plus-circle" 
+                size={36}
+                onPress={() => handleStepsIncrement(1000)}
+              />
+            </View>
+            <View style={styles.quickStepsRow}>
+              <Button 
+                mode="outlined" 
+                onPress={() => handleStepsIncrement(-100)}
+                compact
+              >
+                -100
+              </Button>
+              <Button 
+                mode="outlined" 
+                onPress={() => handleStepsIncrement(100)}
+                compact
+              >
+                +100
+              </Button>
+              <Button 
+                mode="outlined" 
+                onPress={() => handleStepsIncrement(500)}
+                compact
+              >
+                +500
+              </Button>
+            </View>
+            <Text style={styles.targetText}>Target: 10,000 steps = 200 XP</Text>
           </Card.Content>
         </Card>
 
@@ -135,17 +175,25 @@ export default function TrackScreen() {
         <Card style={styles.card}>
           <Card.Content>
             <Text style={styles.cardTitle}>😴 Sleep</Text>
-            <TextInput
-              label="Hours slept"
+            <Text style={styles.sleepDisplay}>{sleepHours} hours</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={12}
+              step={0.5}
               value={sleepHours}
-              onChangeText={setSleepHours}
-              keyboardType="numeric"
-              mode="outlined"
-              style={styles.input}
+              onValueChange={setSleepHours}
+              onSlidingComplete={handleSleepChange}
+              minimumTrackTintColor="#6200ee"
+              maximumTrackTintColor="#d3d3d3"
+              thumbTintColor="#6200ee"
             />
-            <Button mode="contained" onPress={handleSaveSleep}>
-              Save Sleep
-            </Button>
+            <View style={styles.sliderLabels}>
+              <Text style={styles.sliderLabel}>0h</Text>
+              <Text style={styles.sliderLabel}>6h</Text>
+              <Text style={styles.sliderLabel}>12h</Text>
+            </View>
+            <Text style={styles.targetText}>Target: 8 hours = 150 XP</Text>
           </Card.Content>
         </Card>
 
@@ -154,10 +202,22 @@ export default function TrackScreen() {
           <Card.Content>
             <Text style={styles.cardTitle}>💧 Water Intake</Text>
             <View style={styles.counterRow}>
-              <IconButton icon="minus" onPress={handleRemoveWater} />
-              <Text style={styles.counterText}>{waterGlasses} glasses</Text>
-              <IconButton icon="plus" onPress={handleAddWater} />
+              <IconButton 
+                icon="minus-circle" 
+                size={36}
+                onPress={handleRemoveWater} 
+              />
+              <View style={styles.counterDisplay}>
+                <Text style={styles.counterText}>{waterGlasses}</Text>
+                <Text style={styles.counterLabel}>glasses</Text>
+              </View>
+              <IconButton 
+                icon="plus-circle" 
+                size={36}
+                onPress={handleAddWater} 
+              />
             </View>
+            <Text style={styles.targetText}>Target: 8 glasses (for daily bonus)</Text>
           </Card.Content>
         </Card>
 
@@ -180,6 +240,7 @@ export default function TrackScreen() {
                 </Button>
               ))}
             </View>
+            <Text style={styles.targetText}>Target: 3 mood check-ins = 150 XP</Text>
           </Card.Content>
         </Card>
 
@@ -213,6 +274,7 @@ export default function TrackScreen() {
                 Unhealthy
               </Chip>
             </View>
+            <Text style={styles.targetText}>Target: 3 healthy meals = 150 XP</Text>
           </Card.Content>
         </Card>
 
@@ -230,6 +292,7 @@ export default function TrackScreen() {
                 Stop & Save
               </Button>
             )}
+            <Text style={styles.targetText}>Target: 10 minutes = 100 XP</Text>
           </Card.Content>
         </Card>
 
@@ -247,6 +310,7 @@ export default function TrackScreen() {
             >
               Log Journal Entry
             </Button>
+            <Text style={styles.targetText}>Target: 1 entry = 100 XP</Text>
           </Card.Content>
         </Card>
 
@@ -260,6 +324,7 @@ export default function TrackScreen() {
             <Button mode="contained" onPress={handleBreathingExercise}>
               Complete Exercise
             </Button>
+            <Text style={styles.targetText}>Target: 1 exercise = 50 XP</Text>
           </Card.Content>
         </Card>
 
@@ -267,6 +332,7 @@ export default function TrackScreen() {
         <Card style={styles.xpCard}>
           <Card.Content>
             <Text style={styles.xpTitle}>Today's XP: {getTodayXP()}</Text>
+            <Text style={styles.bonusText}>Complete all 8 activities for +200 XP bonus!</Text>
             <Button 
               mode="contained" 
               onPress={handleClaimXP}
@@ -278,6 +344,18 @@ export default function TrackScreen() {
           </Card.Content>
         </Card>
       </View>
+      
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        action={{
+          label: 'OK',
+          onPress: () => setSnackbarVisible(false),
+        }}
+      >
+        {snackbarMessage}
+      </Snackbar>
     </ScrollView>
   );
 }
@@ -309,15 +387,74 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     color: '#666',
   },
+  stepsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 8,
+  },
+  stepsDisplay: {
+    alignItems: 'center',
+    marginHorizontal: 20,
+  },
+  stepsNumber: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#6200ee',
+  },
+  stepsLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  quickStepsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 8,
+  },
+  sleepDisplay: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#6200ee',
+    marginVertical: 8,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  sliderLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+  },
+  sliderLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  targetText: {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: 12,
+    marginTop: 8,
+  },
   counterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginVertical: 8,
+  },
+  counterDisplay: {
+    alignItems: 'center',
+    marginHorizontal: 20,
   },
   counterText: {
-    fontSize: 24,
+    fontSize: 36,
     fontWeight: 'bold',
-    marginHorizontal: 16,
+    color: '#6200ee',
+  },
+  counterLabel: {
+    fontSize: 14,
+    color: '#666',
   },
   moodRow: {
     flexDirection: 'row',
@@ -351,6 +488,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     color: 'white',
+    marginBottom: 8,
+  },
+  bonusText: {
+    fontSize: 12,
+    textAlign: 'center',
+    color: 'rgba(255, 255, 255, 0.9)',
     marginBottom: 12,
   },
   claimButton: {
