@@ -167,7 +167,10 @@ export default function RunnerGameScreen({ navigation }) {
         gemsEarned = DAILY_GEM_LIMIT - currentStats.todayGems;
       }
       
+      const xpEarned = Math.min(Math.floor(score / 2), 100);
+      
       await addGems(gemsEarned);
+      await addXP(xpEarned);
 
       const newStats = {
         highScore: Math.max(currentStats.highScore, score),
@@ -182,7 +185,7 @@ export default function RunnerGameScreen({ navigation }) {
 
       Alert.alert(
         'Game Over!',
-        `${isNewRecord ? '🎉 NEW RECORD! 🎉\n\n' : ''}Score: ${score}\n\n💎 Gems Earned: ${gemsEarned}${isAtDailyLimit ? ' (Daily limit reached)' : ''}\n${isNewRecord ? '' : `🏆 High Score: ${currentStats.highScore}`}\n\n📊 Today's Gems: ${newStats.todayGems}/${DAILY_GEM_LIMIT}`,
+        `${isNewRecord ? '🎉 NEW RECORD! 🎉\n\n' : ''}Score: ${score}\n\n💎 Gems Earned: ${gemsEarned}${isAtDailyLimit ? ' (Daily limit reached)' : ''}\n⭐ XP Earned: ${xpEarned}\n${isNewRecord ? '' : `🏆 High Score: ${currentStats.highScore}`}\n\n📊 Today's Gems: ${newStats.todayGems}/${DAILY_GEM_LIMIT}`,
         [
           { text: 'Menu', onPress: () => setGameState('menu') },
           { text: 'Play Again', onPress: () => handleStartGame() }
