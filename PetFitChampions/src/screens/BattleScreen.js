@@ -125,7 +125,7 @@ export default function BattleScreen({ navigation }) {
             <View style={styles.modeDetails}>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>💎 Gems:</Text>
-                <Text style={styles.detailValue}>5-15</Text>
+                <Text style={styles.detailValue}>4-14</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>⚡ Cost:</Text>
@@ -165,7 +165,7 @@ export default function BattleScreen({ navigation }) {
             <View style={styles.modeDetails}>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>💎 Gems:</Text>
-                <Text style={styles.detailValue}>1 per 10 pts</Text>
+                <Text style={styles.detailValue}>5-25</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>⚡ Cost:</Text>
