@@ -1,0 +1,158 @@
+I want to build a gamified health tracking mobile app called "PetFit Champions" using React Native/Expo. This is a comprehensive wellness app where users track health activities to earn XP and level up virtual pets that can battle in PvP/PvE modes.
+
+=== CORE FEATURES ===
+
+1. USER & AUTHENTICATION
+- Email/password signup and login
+- User profile with username, avatar, current pet display
+- Persistent session management
+
+2. HEALTH TRACKING SYSTEM
+Track these activities (each generates XP):
+- Steps (manual input or API integration placeholder)
+- Sleep hours (manual input)
+- Mood check-ins (emoji selector: 😊😐😢😠😴)
+- Meditation minutes (timer functionality)
+- Journal entries (text input)
+- Water intake (counter/tracker)
+- Meals logged (quick rating: healthy/ok/unhealthy)
+- Breathing exercises (guided timer)
+
+XP Conversion rates:
+- 10k steps = 200 XP
+- 8hrs sleep = 150 XP  
+- 3 healthy meals = 150 XP
+- 10min meditation = 100 XP
+- Journal entry = 100 XP
+- 3 mood check-ins = 150 XP
+- Breathing exercise = 50 XP
+- Complete ALL daily tasks = +200 bonus XP
+
+3. PET SYSTEM
+Starter pets (user chooses one):
+- Vigor (Dog): High Stamina
+- Zen (Cat): High Agility
+- Atlas (Bear): High Strength/Defense
+- Swift (Bird): High Energy
+
+Pet stats (scale 1-100):
+- Health, Energy, Strength, Defense, Stamina, Agility, Attack
+
+Leveling system:
+- Level 1-10: 1000 XP per level
+- Level 11-25: 1500 XP per level
+- Level 26-50: 2500 XP per level
+- On level-up: Award gems equal to level number (e.g., Level 5 = 5 gems)
+
+Evolution tiers:
+- Tier 1: Level 1-15 (Basic)
+- Tier 2: Level 16-35 (costs 150 gems to evolve)
+- Tier 3: Level 36-60 (costs 500 gems to evolve)
+
+4. GEM ECONOMY
+Ways to earn gems:
+- Level-up rewards (gems = current level)
+- Daily login streak (+1 gem per day, max 30)
+- Battle victories (5-20 gems)
+- Weekly challenges (50 gems)
+
+Gem spending:
+- Pet cosmetics (50-200 gems)
+- Stat boosts (+5 permanent, 300 gems)
+- New pet slot (500 gems, max 3 pets)
+- Evolution unlocks (150 or 500 gems)
+
+5. BATTLE SYSTEM (PVP)
+- Turn-based 1v1 combat
+- 3 move types: Attack, Defend, Special
+- Battle uses pet stats to calculate damage/defense
+- Winner steals 10-30% of opponent's unspent gems
+- Energy system: 20 energy per battle (regenerates 1 per 10 min, cap at 100)
+- Matchmaking by level range (±5 levels)
+
+6. UI/UX REQUIREMENTS
+- Clean, modern design with card-based layouts
+- Bottom navigation: Home, Track, Pet, Battle, Profile
+- Home screen: Daily progress dashboard, pet display, quick actions
+- Track screen: All health tracking inputs organized by category
+- Pet screen: Stats display, evolution options, customization
+- Battle screen: Matchmaking, battle interface, history
+- Smooth animations for level-ups, battles, stat changes
+
+7. DATA PERSISTENCE
+Use AsyncStorage or local SQLite database for:
+- User profile data
+- Pet data (stats, level, cosmetics)
+- Health activity logs (last 30 days)
+- Gem balance
+- Battle history
+
+=== TECHNICAL REQUIREMENTS ===
+
+Stack:
+- React Native with Expo
+- State management: React Context API or Redux
+- Navigation: React Navigation
+- UI components: React Native Paper or NativeBase
+- Icons: React Native Vector Icons
+- Animations: React Native Reanimated (optional)
+
+Project structure:
+/src
+/screens (Home, Track, Pet, Battle, Profile, Auth)
+/components (reusable UI components)
+/context (state management)
+/utils (XP calculations, battle logic)
+/data (pet templates, constants)
+/assets (images, icons)
+
+
+=== DEVELOPMENT PHASES ===
+
+PHASE 1 - MVP (Start here):
+1. Authentication screens (login/signup)
+2. Basic home screen with user info
+3. Health tracking screen with manual inputs for:
+   - Steps, sleep, mood, water, meditation timer
+4. XP calculation and display
+5. Single starter pet (Vigor) with basic stats
+6. Level-up system with gem rewards
+7. Pet stats screen
+
+PHASE 2:
+1. Add all 4 starter pets with pet selection screen
+2. Gem economy and gem balance display
+3. Basic pet customization (stat boosts)
+4. Daily streak tracker
+5. Evolution system (3 tiers)
+
+PHASE 3:
+1. PvP battle system (turn-based combat)
+2. Battle matchmaking (mock/random for now)
+3. Energy system and regeneration
+4. Battle history and win/loss tracking
+5. Gem stealing mechanics
+
+PHASE 4:
+1. Multiple pet slots
+2. Pet collection screen
+3. Enhanced cosmetics system
+4. Weekly challenges
+5. Leaderboards
+
+=== IMMEDIATE FIRST STEPS ===
+
+Please create:
+1. Project setup with Expo React Native
+2. Basic file structure as outlined above
+3. Authentication flow (signup/login screens)
+4. Simple home screen that shows:
+   - Welcome message with username
+   - Current XP progress bar
+   - Today's tracked activities count
+   - "Track Activity" button
+5. Navigation between screens
+
+Use placeholder data initially. Focus on clean code structure and component reusability. Add comments explaining key logic.
+
+Start with PHASE 1, Step 1. Let's build this iteratively.
