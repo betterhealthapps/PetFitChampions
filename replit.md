@@ -94,6 +94,15 @@ The app runs on port 5000 with Expo web. Use the webview to interact with the ap
 - Gem stealing mechanics
 
 ## Recent Changes
+- **November 10, 2025 (Update 2)**: Enhanced Track screen with improved UI controls
+  - Steps input: Added large increment/decrement buttons (±1000) and quick buttons (-100, +100, +500)
+  - Sleep input: Replaced text field with interactive slider (0-12 hours, 0.5 step increments)
+  - Water counter: Enhanced with larger icons and improved visual hierarchy
+  - Target labels: Added XP conversion rates below each activity card for user guidance
+  - Daily bonus reminder: Added callout showing "+200 XP for completing all 8 activities"
+  - Toast notifications: Replaced all Alert dialogs with Snackbar toasts for better UX
+  - Auto-save: All inputs now save automatically with toast feedback
+
 - **November 10, 2025**: Initial Phase 1 MVP implementation completed
   - Full authentication system
   - Complete health tracking for 8 activities
