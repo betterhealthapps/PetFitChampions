@@ -70,6 +70,7 @@ export default function RunnerGameScreen({ navigation }) {
   const gameLoop = useRef(null);
   const spawnTimer = useRef(null);
   const lastFrameTime = useRef(Date.now());
+  const preBoostSpeedRef = useRef(INITIAL_SPEED);
 
   useEffect(() => {
     loadGameData();
@@ -100,6 +101,14 @@ export default function RunnerGameScreen({ navigation }) {
 
       setPetConfig(config);
       setIsFlying(config.category === 'flying');
+
+      setMaxJumps(1);
+      setHasExtraLife(false);
+      setCanDestroyObstacles(false);
+      setCanFireBreath(false);
+      setCanResurrect(false);
+      setHasSpeedBoost(false);
+      preBoostSpeedRef.current = INITIAL_SPEED;
 
       switch (config.runnerAbility?.effect) {
         case 'tripleJump':
@@ -158,6 +167,7 @@ export default function RunnerGameScreen({ navigation }) {
       clearTimeout(speedBoostTimer);
       setSpeedBoostTimer(null);
     }
+    preBoostSpeedRef.current = INITIAL_SPEED;
 
     petY.setValue(isFlying ? GROUND_HEIGHT + 250 : GROUND_HEIGHT);
     petRotation.setValue(0);
@@ -489,10 +499,15 @@ export default function RunnerGameScreen({ navigation }) {
         setJumpCount(prev => prev + 1);
 
         if (hasSpeedBoost) {
-          setSpeed(prev => Math.min(prev * 1.3, 600));
           if (speedBoostTimer) clearTimeout(speedBoostTimer);
+          
+          setSpeed(prev => {
+            preBoostSpeedRef.current = prev;
+            return Math.min(prev * 1.3, 600);
+          });
+          
           const timer = setTimeout(() => {
-            setSpeed(INITIAL_SPEED);
+            setSpeed(prev => Math.max(prev / 1.3, preBoostSpeedRef.current));
           }, 1500);
           setSpeedBoostTimer(timer);
         }
