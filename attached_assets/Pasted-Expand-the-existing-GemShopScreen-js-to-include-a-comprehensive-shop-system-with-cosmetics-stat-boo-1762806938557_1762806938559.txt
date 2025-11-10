@@ -1,0 +1,3413 @@
+Expand the existing GemShopScreen.js to include a comprehensive shop system with cosmetics, stat boosts, tricks, and pet slots.
+
+REQUIREMENTS:
+
+1. SHOP CATEGORIES (Tab Navigation):
+   - Cosmetics
+   - Stat Boosts
+   - Battle Tricks
+   - Pet Slots
+
+2. COSMETICS SECTION:
+
+Items available:
+const COSMETICS = {
+hats:
+[ { id: 'hat_party', name: 'Party Hat', cost: 50, icon: '🎩', rarity: 'comm
+n' }, { id: 'hat_crown', name: 'Royal Crown', cost: 150, icon: '👑', rarity:
+'rare' }, { id: 'hat_wizard', name: 'Wizard Hat', cost: 100, icon: '🧙', rarity:
+'uncommon' }, { id: 'hat_halo', name: 'Halo', cost: 200, icon: '😇',
+ra
+ity: 'epic' },
+], accessories: [ { id: 'acc_bow', name: 'Bow Tie', cost: 75, icon:
+'🎀', rarity: 'common' }, { id: 'acc_glasses', name: 'Cool Glasses', cost: 80, i
+on: '😎', rarity: 'common' }, { id: 'acc_scarf', name: 'Winter Scarf', cost: 90,
+icon: '🧣', rarity: 'uncommon' }, { id: 'acc_medal', name: 'Gold Medal', co
+t:
+175, ico
+: '🥇', rarity: 'rare' }, ], skins: [ { id: 'skin_glow', name: 'Glowing
+ura', cost: 150, icon: '✨', rarity: 'rare' }, { id: 'skin_rainbow', name: 'Rain
+ow Fur', cost: 200, icon: '🌈', rarity: 'epic' }, { id: 'skin_galaxy', name: 'Gal
+xy
+
+Display with:
+- Rarity badges (Common/Uncommon/Rare/Epic with colors)
+- Preview on pet (if possible, show icon overlay)
+- "Owned" checkmark if purchased
+- "Equip/Unequip" button for owned items
+
+3. STAT BOOSTS SECTION:
+
+const STAT_BOOSTS = [
+{ id: 'boost_health', name: 'Health +5', stat: 'health', cost: 300, icon: '❤️'
+, { id: 'boost_strength', name: 'Strength +5', stat: 'strength', cost: 300, icon: '💪
+}, { id: 'boost_defense', name: 'Defense +5', stat: 'defense', cost: 300, icon: ' 
+️' }, { id: 'boost_agility', name: 'Agility +5', stat: 'agility', cost: 300, icon
+'⚡' }, { id: 'boost_stamina', name: 'Stamina +5', stat: 'stamina', cost: 300, ico
+: '🏃' }, { id: 'boost_attack', name: 'Attack +5', stat: 'attack', cost: 300, i
+on: '⚔️' }, { id: 'boost_energy', name: 'Energy +5', stat: 'energy', cost: 300,
+
+Display:
+- Current stat value
+- Boosted value preview (+5)
+- Warning if stat already at 100 (cap)
+- Permanent boost badge
+
+4. BATTLE TRICKS SECTION:
+
+const BATTLE_TRICKS = [
+
+{ id: 'trick_quick_s
+rike', name: 'Qu
+ck Strike'
+cost:
+100, icon: '💨', description: 'Fast atta
+k with 20% bonu
+d
+m
+ge', unlockLevel: 5
+}, { id:
+trick_powe
+_slam',
+name: 'Power Slam', cost: 200, icon: '💥',
+description: 'H
+av
+
+ttack, 50% bonus
+ut 30% accuracy',
+unlockLe
+el: 10, }
+{ id: 'trick_heal', name: 'Rejuvenate'
+cost: 250,
+
+
+icon: '💚', description
+'Restore 20% HP instea
+of attack
+ng', un
+ockLevel: 15, }, { id: 'trick_counter_stance
+, name: 'Co
+nt
+r
+Stance', cost: 300,
+icon: '🔄', descr
+ption: 'Re
+lect 50% of
+damage taken this turn', unlockLevel: 20, },
+{ id: 'tri
+k_
+
+
+Display:
+- Trick name and icon
+- Description of effect
+- Unlock level requirement
+- "Locked" badge if pet level too low
+- "Learn" button (if unlocked and affordable)
+- "Equipped" badge if already learned
+
+5. PET SLOTS SECTION:
+
+const PET_SLOT_ITEM = {
+id: 'pet_slot
+, name: 'Additional Pet Sl
+t', cost
+500, ico
+: '🐾', description: 'Unlock a slot to train another pet (Max
+total)',
+
+
+Display:
+- Current slots owned (1/3, 2/3, etc.)
+- Visual representation of slots (filled/empty boxes)
+- Purchase button (disabled if at max)
+- New pet selection screen after purchase
+
+6. UI STRUCTURE:
+
+export default function GemShopScreen({ navigation }) {
+const [activeTab, setActiveTab] = useState('cosmetics'); // cosmetics | boosts | tricks | slo
+s const [userGems, setUserGems] = useState
+0); const [currentPet, setCurrentPet] = useState(
+ull); const [ownedItems, setOwnedItems] = useSt
+te([]); const [equippedItems, setEquippedItems] =
+seState({
+hat: null,
+accessory:
+nul
+, skin: null, }); const [learnedTricks, setLear
+// Tab Navigation
+<View style={styles.tabs}>
+<TouchableOpacity onPress={() => setActiveTab('cosmetics
+<Text>👔 Cosmetics</Text>
+</TouchableOpacity>
+<TouchableOpacity onPress={() => setActiveTab('boosts
+<Text>📈 Stat Boosts</Text>
+</TouchableOpacity>
+<TouchableOpacity onPress={() => setActiveTab('tricks
+<Text>⚡ Tricks</Text>
+</TouchableOpacity>
+<TouchableOpacity onPress={() => setActiveTab('slots
+<Text>🐾 Pet Slots</Text>
+</TouchableOpacity>
+</View>
+
+// Render content based on activeTab
+{activeTab === 'cosmetics' && renderCosmetics(
+} {activeTab === 'boosts' && renderStatBoost
+()} {activeTab === 'tricks' && renderTri
+ks()} {activeTab === 'slots' && renderPet
+
+
+7. PURCHASE FLOW:
+
+For Cosmetics:
+- Check if already owned
+- Deduct gems
+- Add to ownedItems array
+- Show equip option
+
+For Stat Boosts:
+- Check if stat already at 100
+- Deduct gems
+- Permanently increase pet stat
+- Update Firebase
+
+For Tricks:
+- Check pet level requirement
+- Deduct gems
+- Add to learnedTricks array
+- Make available in battle
+
+For Pet Slots:
+- Check if already at max (3)
+- Deduct gems
+- Increase petSlots count
+- Navigate to pet selection screen
+
+8. FIREBASE STRUCTURE:
+
+Update user document:
+{
+gems: number,
+pets: [
+{
+id: string,
+baseStats: {...},
+cosmetics: {
+hat: string | null,
+accessory: string | null,
+skin: string | null,
+},
+ownedCosmetics: [string],
+learnedTricks: [string],
+}
+],
+petSlots: number,
+}
+
+
+9. EQUIP/UNEQUIP SYSTEM:
+
+const handleEquip = async (item, slot) => {
+const userRef = doc(db, 'users', auth.currentUser.uid);
+const userDoc = await getDoc(userRef);
+const pets = userDoc.data().pets;
+
+// Update current pet's equipped items
+pets.cosmetics[slot] = item.id; // Equip
+// OR
+pets.cosmetics[slot] = null; // Unequip
+
+await updateDoc(userRef, { pets });
+};
+
+
+Create a comprehensive shop with all categories, smooth navigation, clear purchase flows, and visual feedback.
+Show rarity with colored borders (gray/green/blue/purple for common/uncommon/rare/epic).
+Display pet preview with equipped cosmetics.
+
+Implement a battle traits system that unlocks passive abilities based on pet stats.
+
+REQUIREMENTS:
+
+1. TRAIT DEFINITIONS:
+
+// utils/battleTraits.js
+
+export const BATTLE_TRAITS = {
+firstStrike: {
+id: 'first_strike',
+name: 'First Strike',
+description: 'Attack first if Agility > opponent',
+icon: '⚡',
+requirement: { stat: 'agility', comparison: 'greater', opponent: true },
+effect: 'initiative',
+},
+endurance: {
+id: 'endurance',
+name: 'Endurance',
+description: 'Restore 10% health each turn if Stamina > 70',
+icon: '💪',
+requirement: { stat: 'stamina', value: 70, comparison: 'greater' },
+effect: 'heal_per_turn',
+healAmount: 10, // percentage
+},
+counter: {
+id: 'counter',
+name: 'Counter',
+description: '25% chance to reflect damage if Defense > 60',
+icon: '🔄',
+requirement: { stat: 'defense', value: 60, comparison: 'greater' },
+effect: 'damage_reflect',
+chance: 0.25,
+reflectAmount: 50, // percentage of damage
+},
+criticalHit: {
+id: 'critical_hit',
+name: 'Critical Master',
+description: '15% chance for double damage if Strength > 80',
+icon: '💥',
+requirement: { stat: 'strength', value: 80, comparison: 'greater' },
+effect: 'crit_boost',
+chance: 0.15,
+multiplier: 2.0,
+},
+};
+
+export const checkTraitActive = (pet, trait, opponentPet = null) => {
+const req = trait.requirement;
+
+if (req.opponent) {
+// Compare with opponent stat
+return pet.baseStats[req.stat] > opponentPet.baseStats[req.stat];
+} else {
+// Compare with threshold
+return pet.baseStats[req.stat] > req.value;
+}
+};
+
+export const getActiveTrait(pet, traitId, opponentPet = null) => {
+const trait = BATTLE_TRAITS[traitId];
+const isActive = checkTraitActive(pet, trait, opponentPet);
+return isActive ? trait : null;
+};
+
+
+2. INTEGRATE INTO BATTLE SYSTEM:
+
+Update battleLogic.js:
+
+import { BATTLE_TRAITS, getActiveTrait } from './battleTraits';
+
+// At battle start
+export const initializeBattle = (playerPet, opponentPet) => {
+const playerTraits = {
+firstStrike: getActiveTrait(playerPet, 'firstStrike', opponentPet),
+endurance: getActiveTrait(playerPet, 'endurance'),
+counter: getActiveTrait(playerPet, 'counter'),
+criticalHit: getActiveTrait(playerPet, 'criticalHit'),
+};
+
+const opponentTraits = {
+firstStrike: getActiveTrait(opponentPet, 'firstStrike', playerPet),
+endurance: getActiveTrait(opponentPet, 'endurance'),
+counter: getActiveTrait(opponentPet, 'counter'),
+criticalHit: getActiveTrait(opponentPet, 'criticalHit'),
+};
+
+return { playerTraits, opponentTraits };
+};
+
+// Determine turn order
+export const determineTurnOrder = (playerPet, opponentPet, playerTraits, opponentTraits) => {
+// Check First Strike trait
+if (playerTraits.firstStrike && !opponentTraits.firstStrike) {
+return 'player';
+}
+if (opponentTraits.firstStrike && !playerTraits.firstStrike) {
+return 'opponent';
+}
+
+// Both have First Strike or neither - use agility
+if (playerPet.baseStats.agility > opponentPet.baseStats.agility) {
+return 'player';
+}
+if (opponentPet.baseStats.agility > playerPet.baseStats.agility) {
+return 'opponent';
+}
+
+// Tie - random
+return Math.random() > 0.5 ? 'player' : 'opponent';
+};
+
+// Apply Endurance healing at turn start
+export const applyEnduranceHealing = (currentHealth, maxHealth, trait) => {
+if (!trait) return currentHealth;
+
+const healAmount = maxHealth * (trait.healAmount / 100);
+return Math.min(maxHealth, currentHealth + healAmount);
+};
+
+// Check for Counter reflection
+export const checkCounterReflect = (damage, trait) => {
+if (!trait) return 0;
+
+if (Math.random() < trait.chance) {
+return damage * (trait.reflectAmount / 100);
+}
+return 0;
+};
+
+// Enhanced crit check with trait
+export const checkCriticalHit = (attackerPet, trait) => {
+let baseCritChance = attackerPet.baseStats.agility / 100 * 0.2;
+
+if (trait) {
+baseCritChance += trait.chance;
+}
+
+return Math.random() < baseCritChance;
+};
+
+
+3. BATTLE SCREEN UI - TRAIT INDICATORS:
+
+Show active traits during battle:
+
+// In battle screen
+const ActiveTraitsDisplay = ({ traits }) => {
+return (
+<View style={styles.traitsContainer}>
+{Object.values(traits).filter(t => t).map(trait => (
+<View key={trait.id} style={styles.traitBadge}>
+<Text style={styles.traitIcon}>{trait.icon}</Text>
+</View>
+))}
+</View>
+);
+};
+
+// Show in battle
+<ActiveTraitsDisplay traits={playerTraits} />
+
+
+4. PET SCREEN - TRAIT STATUS:
+
+Add trait display in PetScreen.js:
+
+const TraitsSection = ({ pet }) => {
+const traits = [
+{ ...BATTLE_TRAITS.firstStrike, active: pet.baseStats.agility > 50 }, // simplified
+{ ...BATTLE_TRAITS.endurance, active: pet.baseStats.stamina > 70 },
+{ ...BATTLE_TRAITS.counter, active: pet.baseStats.defense > 60 },
+{ ...BATTLE_TRAITS.criticalHit, active: pet.baseStats.strength > 80 },
+];
+
+return (
+<View style={styles.traitsSection}>
+<Text style={styles.sectionTitle}>Battle Traits</Text>
+{traits.map(trait => (
+<View key={trait.id} style={styles.traitRow}>
+<Text style={styles.traitIcon}>{trait.icon}</Text>
+<View style={styles.traitInfo}>
+<Text style={styles.traitName}>{trait.name}</Text>
+<Text style={styles.traitDesc}>{trait.description}</Text>
+</View>
+<View style={[
+styles.traitStatus,
+trait.active && styles.traitActive
+]}>
+<Text style={styles.traitStatusText}>
+{trait.active ? 'ACTIVE' : 'LOCKED'}
+</Text>
+</View>
+</View>
+))}
+</View>
+);
+};
+
+
+5. BATTLE LOG MESSAGES:
+
+Add trait trigger messages:
+
+// When First Strike activates
+addLog('⚡ Your pet strikes first with superior agility!');
+
+// When Endurance heals
+addLog('💪 Endurance restored 10 HP!');
+
+// When Counter reflects
+addLog('🔄 Counter! Reflected 15 damage back!');
+
+// When Critical Master triggers
+addLog('💥 Critical Master! Double damage!');
+
+
+Create a complete battle traits system that:
+- Checks requirements automatically
+- Shows active/locked status in pet screen
+- Displays trait badges during battle
+- Applies effects correctly in combat
+- Logs trait activations for clarity
+
+
+Create a comprehensive leaderboard system with multiple categories and weekly rewards.
+
+REQUIREMENTS:
+
+1. LEADERBOARD CATEGORIES:
+
+Create /screens/LeaderboardScreen.js with tabs:
+- Overall XP (total XP earned)
+- Battle Masters (PvP win rate)
+- Consistency (longest streak)
+- Weekly Top (XP earned this week)
+
+2. LEADERBOARD UI STRUCTURE:
+
+export default function LeaderboardScreen() {
+const [activeTab, setActiveTab] = useState('overall'); // overall | battles | streak | weekly
+const [leaderboard, setLeaderboard] = useState([]);
+const [userRank, setUserRank] = useState(null);
+const [weeklyRewards, setWeeklyRewards] = useState(null);
+
+const tabs = [
+{ id: 'overall', name: 'Overall', icon: '🏆' },
+{ id: 'battles', name: 'Battles', icon: '⚔️' },
+{ id: 'streak', name: 'Streaks', icon: '🔥' },
+{ id: 'weekly', name: 'Weekly', icon: '📅' },
+];
+
+return (
+<View style={styles.container}>
+{/* Header with current week countdown */}
+<View style={styles.header}>
+<Text style={styles.title}>Leaderboards</Text>
+<Text style={styles.weekInfo}>
+Week ends in: {getTimeUntilWeekEnd()}
+</Text>
+</View>
+
+  {/* Tab Navigation */}
+  <View style={styles.tabs}>
+    {tabs.map(tab => (
+      <TouchableOpacity
+        key={tab.id}
+        style={[styles.tab, activeTab === tab.id && styles.activeTab]}
+        onPress={() => setActiveTab(tab.id)}
+      >
+        <Text style={styles.tabIcon}>{tab.icon}</Text>
+        <Text style={styles.tabText}>{tab.name}</Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+
+  {/* User's Rank Card */}
+  {userRank && (
+    <View style={styles.userRankCard}>
+      <Text style={styles.userRankLabel}>Your Rank</Text>
+      <Text style={styles.userRankValue}>#{userRank.position}</Text>
+      <Text style={styles.userRankStat}>
+        {getUserStatForTab(activeTab, userRank)}
+      </Text>
+    </View>
+  )}
+
+  {/* Rewards Preview */}
+  <View style={styles.rewardsPreview}>
+    <Text style={styles.rewardsTitle}>Weekly Rewards</Text>
+    <View style={styles.rewardTiers}>
+      <Text style={styles.rewardTier}>🥇 1st: 500💎 + Exclusive Hat</Text>
+      <Text style={styles.rewardTier}>🥈 2-5th: 200💎 + Rare Skin</Text>
+      <Text style={styles.rewardTier}>🥉 6-20th: 100💎</Text>
+      <Text style={styles.rewardTier}>📊 21-100th: 50💎</Text>
+    </View>
+  </View>
+
+  {/* Leaderboard List */}
+  <FlatList
+    data={leaderboard}
+    renderItem={({ item, index }) => (
+      <LeaderboardEntry entry={item} rank={index + 1} category={activeTab} />
+    )}
+    keyExtractor={(item) => item.userId}
+  />
+</View>
+);
+}
+
+
+3. LEADERBOARD ENTRY COMPONENT:
+
+const LeaderboardEntry = ({ entry, rank, category }) => {
+const getRankIcon = (rank) => {
+if (rank === 1) return '🥇';
+if (rank === 2) return '🥈';
+if (rank === 3) return '🥉';
+return #${rank};
+};
+
+const getStatDisplay = (category, entry) => {
+switch(category) {
+case 'overall':
+return ${entry.totalXP.toLocaleString()} XP;
+case 'battles':
+return ${entry.winRate}% (${entry.wins}W-${entry.losses}L);
+case 'streak':
+return ${entry.longestStreak} days;
+case 'weekly':
+return ${entry.weeklyXP.toLocaleString()} XP;
+}
+};
+
+return (
+<View style={styles.entry}>
+<View style={styles.rankBadge}>
+<Text style={styles.rankText}>{getRankIcon(rank)}</Text>
+</View>
+
+  <View style={styles.entryInfo}>
+    <Text style={styles.username}>{entry.username}</Text>
+    <Text style={styles.stat}>{getStatDisplay(category, entry)}</Text>
+  </View>
+  
+  <View style={styles.petPreview}>
+    <Text style={styles.petLevel}>Lv.{entry.level}</Text>
+  </View>
+</View>
+);
+};
+
+
+4. FIREBASE QUERIES:
+
+const loadLeaderboard = async (category) => {
+let q;
+
+switch(category) {
+case 'overall':
+q = query(
+collection(db, 'users'),
+orderBy('totalXP', 'desc'),
+limit(100)
+);
+break;
+case 'battles':
+  q = query(
+    collection(db, 'users'),
+    orderBy('winRate', 'desc'),
+    where('totalBattles', '>=', 10), // Minimum battles to qualify
+    limit(100)
+  );
+  break;
+  
+case 'streak':
+  q = query(
+    collection(db, 'users'),
+    orderBy('longestStreak', 'desc'),
+    limit(100)
+  );
+  break;
+  
+case 'weekly':
+  q = query(
+    collection(db, 'users'),
+    orderBy('weeklyXP', 'desc'),
+    limit(100)
+  );
+  break;
+}
+
+const snapshot = await getDocs(q);
+const data = snapshot.docs.map(doc => ({
+userId: doc.id,
+...doc.data()
+}));
+
+return data;
+};
+
+
+5. WEEKLY RESET SYSTEM:
+
+Create Cloud Function (or scheduled script):
+
+// functions/weeklyReset.js
+exports.weeklyLeaderboardReset = functions.pubsub
+.schedule('every monday 00:00')
+.timeZone('UTC')
+.onRun(async (context) => {
+
+// Get top 100 from weekly leaderboard
+const topPlayers = await admin.firestore()
+  .collection('users')
+  .orderBy('weeklyXP', 'desc')
+  .limit(100)
+  .get();
+
+const batch = admin.firestore().batch();
+
+topPlayers.docs.forEach((doc, index) => {
+  const rank = index + 1;
+  const rewards = calculateWeeklyRewards(rank);
+  
+  // Award rewards
+  const userRef = admin.firestore().collection('users').doc(doc.id);
+  batch.update(userRef, {
+    gems: admin.firestore.FieldValue.increment(rewards.gems),
+    weeklyXP: 0, // Reset weekly XP
+    // Add exclusive cosmetics for top ranks
+    ...(rewards.cosmetic && {
+      'pets.0.ownedCosmetics': admin.firestore.FieldValue.arrayUnion(rewards.cosmetic)
+    }),
+  });
+  
+  // Log reward
+  batch.set(userRef.collection('rewardHistory').doc(), {
+    type: 'weekly_leaderboard',
+    rank,
+    gems: rewards.gems,
+    cosmetic: rewards.cosmetic || null,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  });
+});
+
+await batch.commit();
+console.log('Weekly leaderboard rewards distributed');
+});
+
+function calculateWeeklyRewards(rank) {
+if (rank === 1) {
+return { gems: 500, cosmetic: 'exclusive_champion_crown' };
+}
+if (rank <= 5) {
+return { gems: 200, cosmetic: 'exclusive_elite_skin' };
+}
+if (rank <= 20) {
+return { gems: 100 };
+}
+if (rank <= 100) {
+return { gems: 50 };
+}
+return { gems: 0 };
+}
+
+
+6. WEEKLY XP TRACKING:
+
+Update health tracking to include weekly XP:
+
+// In TrackScreen.js handleSubmit
+await updateDoc(userRef, {
+totalXP: increment(earnedXP),
+weeklyXP: increment(earnedXP), // Add this
+lastTrackedDate: new Date(),
+});
+
+
+7. REWARD NOTIFICATION:
+
+// components/WeeklyRewardModal.js
+export default function WeeklyRewardModal({ visible, reward, onClose }) {
+return (
+<Modal visible={visible} transparent animationType="fade">
+<View style={styles.overlay}>
+<View style={styles.rewardCard}>
+<Text style={styles.title}>🎉 Weekly Reward!</Text>
+<Text style={styles.rank}>Rank #{reward.rank}</Text>
+
+      <View style={styles.rewards}>
+        <Text style={styles.gems}>+{reward.gems} 💎</Text>
+        {reward.cosmetic && (
+          <Text style={styles.cosmetic}>
+            Exclusive {reward.cosmetic}!
+          </Text>
+        )}
+      </View>
+      
+      <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+        <Text style={styles.closeBtnText}>Claim Rewards</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+);
+}
+
+
+Create complete leaderboard system with:
+- Multiple categories
+- Real-time rankings
+- User position display
+- Weekly reset automation
+- Reward distribution
+- Exclusive cosmetics for top players
+
+Create a Pet Trick Showcase mini-game where users perform trick combos judged by NPC judges for rewards.
+
+REQUIREMENTS:
+
+1. CREATE SCREEN: /screens/TrickShowcaseScreen.js
+
+2. TRICK SYSTEM:
+
+const AVAILABLE_TRICKS = [
+{ id: 'jump', name: 'High Jump', icon: '🦘', timing: 'fast', difficulty: 1 },
+{ id: 'spin', name: 'Spin Attack', icon: '🌀', timing: 'medium', difficulty: 2 },
+{ id: 'flip', name: 'Backflip', icon: '🤸', timing: 'fast', difficulty: 3 },
+{ id: 'dance', name: 'Victory Dance', icon: '💃', timing: 'medium', difficulty: 2 },
+{ id: 'roar', name: 'Power Roar', icon: '🦁', timing: 'slow', difficulty: 2 },
+{ id: 'stealth', name: 'Shadow Step', icon: '👤', timing: 'fast', difficulty: 3 },
+{ id: 'beam', name: 'Energy Beam', icon: '✨', timing: 'slow', difficulty: 4 },
+{ id: 'shield', name: 'Barrier', icon: '🛡️', timing: 'medium', difficulty: 3 },
+];
+
+
+3. SHOWCASE FLOW:
+
+export default function TrickShowcaseScreen() {
+const [gameState, setGameState] = useState('setup'); // setup | performing | judging | results
+const [selectedTricks, setSelectedTricks] = useState([]);
+const [trickMastery, setTrickMastery] = useState({});
+const [currentTrick, setCurrentTrick] = useState(0);
+const [timingAccuracy, setTimingAccuracy] = useState([]);
+const [judgeScores, setJudgeScores] = useState(null);
+const [userEnergy, setUserEnergy] = useState(100);
+
+// SETUP PHASE
+const renderSetup = () => (
+<View style={styles.setup}>
+<Text style={styles.title}>Pet Trick Showcase</Text>
+<Text style={styles.subtitle}>Select 3 tricks for your performance</Text>
+
+  {/* Trick Selection */}
+  <ScrollView>
+    {AVAILABLE_TRICKS.map(trick => (
+      <TouchableOpacity
+        key={trick.id}
+        style={[
+          styles.trickOption,
+          selectedTricks.includes(trick.id) && styles.trickSelected
+        ]}
+        onPress={() => handleTrickSelect(trick.id)}
+        disabled={!selectedTricks.includes(trick.id) && selectedTricks.length >= 3}
+      >
+        <Text style={styles.trickIcon}>{trick.icon}</Text>
+        <View style={styles.trickInfo}>
+          <Text style={styles.trickName}>{trick.name}</Text>
+          <Text style={styles.trickDifficulty}>
+            Difficulty: {'⭐'.repeat(trick.difficulty)}
+          </Text>
+          <Text style={styles.trickMastery}>
+            Mastery: {trickMastery[trick.id] || 0}%
+          </Text>
+        </View>
+      </TouchableOpacity>
+    ))}
+  </ScrollView>
+  
+  <TouchableOpacity
+    style={styles.startBtn}
+    onPress={startShowcase}
+    disabled={selectedTricks.length !== 3 || userEnergy < 10}
+  >
+    <Text style={styles.startBtnText}>Start Showcase (10⚡)</Text>
+  </TouchableOpacity>
+</View>
+);
+
+// PERFORMING PHASE
+const renderPerforming = () => {
+const trick = AVAILABLE_TRICKS.find(t => t.id === selectedTricks[currentTrick]);
+
+return (
+  <View style={styles.performing}>
+    <Text style={styles.trickCounter}>Trick {currentTrick + 1} of 3</Text>
+    
+    <Text style={styles.currentTrickIcon}>{trick.icon}</Text>
+    <Text style={styles.currentTrickName}>{trick.name}</Text>
+    
+    {/* Timing Mini-Game */}
+    <TimingBar
+      speed={trick.timing}
+      onComplete={(accuracy) => handleTrickComplete(accuracy)}
+    />
+    
+    <Text style={styles.instruction}>
+      Tap when the marker reaches the green zone!
+    </Text>
+  </View>
+);
+};
+
+// JUDGING PHASE
+const renderJudging = () => (
+<View style={styles.judging}>
+<Text style={styles.title}>Judges Deliberating...</Text>
+
+  <View style={styles.judges}>
+    {['Judge A', 'Judge B', 'Judge C'].map((judge, i) => (
+      <View key={i} style={styles.judge}>
+        <Text style={styles.judgeIcon}>👨‍⚖️</Text>
+        <Text style={styles.judgeName}>{judge}</Text>
+        <Text style={styles.judgeThinking}>...</Text>
+      </View>
+    ))}
+  </View>
+</View>
+
+);
+
+// RESULTS PHASE
+const renderResults = () => {
+const totalScore = judgeScores.reduce((a, b) => a + b, 0) / judgeScores.length;
+const tier = getTier(totalScore);
+const rewards = calculateRewards(totalScore, tier);
+return (
+  <View style={styles.results}>
+    <Text style={styles.resultsTitle}>Performance Complete!</Text>
+    
+    <View style={styles.scores}>
+      {judgeScores.map((score, i) => (
+        <View key={i} style={styles.judgeScore}>
+          <Text style={styles.judgeLabel}>Judge {String.fromCharCode(65 + i)}</Text>
+          <Text style={styles.scoreValue}>{score}/10</Text>
+        </View>
+      ))}
+    </View>
+    
+    <View style={styles.finalScore}>
+      <Text style={styles.finalScoreLabel}>Average Score</Text>
+      <Text style={styles.finalScoreValue}>{totalScore.toFixed(1)}/10</Text>
+    </View>
+    
+    <View style={[styles.tierBadge, styles[`tier${tier}`]]}>
+      <Text style={styles.tierText}>{getTierName(tier)}</Text>
+    </View>
+    
+    <View style={styles.rewards}>
+      <Text style={styles.rewardsTitle}>Rewards Earned</Text>
+      <Text style={styles.rewardGems}>+{rewards.gems} 💎</Text>
+      {rewards.bonus && (
+        <Text style={styles.rewardBonus}>{rewards.bonus}</Text>
+      )}
+    </View>
+    
+    <TouchableOpacity style={styles.againBtn} onPress={resetShowcase}>
+      <Text style={styles.againBtnText}>Perform Again</Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity style={styles.exitBtn} onPress={() => navigation.goBack()}>
+      <Text style={styles.exitBtnText}>Back to Battle Modes</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+};
+
+return (
+<View style={styles.container}>
+{gameState === 'setup' && renderSetup()}
+{gameState === 'performing' && renderPerforming()}
+{gameState === 'judging' && renderJudging()}
+{gameState === 'results' && renderResults()}
+</View>
+);
+}
+
+
+4. TIMING BAR COMPONENT:
+
+// components/TimingBar.js
+const TimingBar = ({ speed, onComplete }) => {
+const [markerPosition, setMarkerPosition] = useState(0);
+const [tapped, setTapped] = useState(false);
+
+useEffect(() => {
+const speeds = { fast: 20, medium: 15, slow: 10 };
+const interval = setInterval(() => {
+setMarkerPosition(prev => {
+if (prev >= 100) {
+clearInterval(interval);
+if (!tapped) onComplete(0); // Missed
+return 100;
+}
+return prev + 1;
+});
+}, speeds[speed]);
+return () => clearInterval(interval);
+
+}, []);
+
+const handleTap = () => {
+if (tapped) return;
+setTapped(true);
+
+// Green zone is 45-55%
+const accuracy = 100 - Math.abs(markerPosition - 50);
+onComplete(Math.max(0, accuracy));
+
+};
+
+return (
+<TouchableOpacity style={styles.timingContainer} onPress={handleTap}>
+<View style={styles.timingBar}>
+<View style={styles.greenZone} /> {/* 45-55% */}
+<View
+style={[
+styles.marker,
+{ left: ${markerPosition}% }
+]}
+/>
+</View>
+<Text style={styles.tapInstruction}>TAP!</Text>
+</TouchableOpacity>
+);
+};
+
+
+5. SCORING SYSTEM:
+
+const calculateJudgeScores = (timingAccuracies, selectedTricks, trickMastery) => {
+return.map((judgeNum) => {​
+let baseScore = 0;
+// Factor 1: Timing accuracy (40% of score)
+const avgTiming = timingAccuracies.reduce((a, b) => a + b, 0) / 3;
+baseScore += (avgTiming / 100) * 4;
+
+// Factor 2: Trick difficulty (30% of score)
+const avgDifficulty = selectedTricks.reduce((sum, trickId) => {
+  const trick = AVAILABLE_TRICKS.find(t => t.id === trickId);
+  return sum + trick.difficulty;
+}, 0) / 3;
+baseScore += (avgDifficulty / 4) * 3;
+
+// Factor 3: Trick mastery (20% of score)
+const avgMastery = selectedTricks.reduce((sum, trickId) => {
+  return sum + (trickMastery[trickId] || 0);
+}, 0) / 3;
+baseScore += (avgMastery / 100) * 2;
+
+// Factor 4: Variety (10% of score)
+const variety = new Set(selectedTricks.map(id => 
+  AVAILABLE_TRICKS.find(t => t.id === id).timing
+)).size / 3; // Different timings
+baseScore += variety * 1;
+
+// Add judge randomness (±0.5)
+const randomness = (Math.random() - 0.5);
+
+return Math.min(10, Math.max(1, baseScore + randomness));
+});
+};
+
+const getTier = (avgScore) => {
+if (avgScore >= 9) return 'S';
+if (avgScore >= 8) return 'A';
+if (avgScore >= 7) return 'B';
+if (avgScore >= 6) return 'C';
+return 'D';
+};
+
+const getTierName = (tier) => {
+const names = {
+S: 'Legendary Performance!',
+A: 'Outstanding!',
+B: 'Great Job!',
+C: 'Good Effort!',
+D: 'Keep Practicing!',
+};
+return names[tier];
+};
+
+const calculateRewards = (avgScore, tier) => {
+const baseGems = {
+S: 50,
+A: 35,
+B: 25,
+C: 15,
+D: 10,
+};
+
+const rewards = {
+gems: baseGems[tier],
+bonus: null,
+};
+
+if (tier === 'S') {
+rewards.bonus = 'Perfect combo bonus: +10 gems!';
+rewards.gems += 10;
+}
+
+return rewards;
+};
+
+
+6. TRICK MASTERY IMPROVEMENT:
+
+// After each showcase, improve mastery for practiced tricks
+const improveTrickMastery = async (userId, tricks, accuracies) => {
+const userRef = doc(db, 'users', userId);
+const userDoc = await getDoc(userRef);
+const currentMastery = userDoc.data().trickMastery || {};
+
+tricks.forEach((trickId, index) => {
+const improvement = accuracies[index] / 10; // 0-10% improvement
+const current = currentMastery[trickId] || 0;
+currentMastery[trickId] = Math.min(100, current + improvement);
+});
+
+await updateDoc(userRef, {
+trickMastery: currentMastery,
+});
+};
+
+
+7. DAILY COMPETITIONS:
+
+Add daily showcase:
+
+
+// Firebase structure for daily competition
+{
+dailyShowcase: {
+date: '2025-11-11',
+participated: false,
+bestScore: 0,
+}
+}
+
+// Check if user participated today
+const canParticipateToday = async (userId) => {
+const userDoc = await getDoc(doc(db, 'users', userId));
+const daily = userDoc.data().dailyShowcase;
+const today = new Date().toDateString();
+
+return !daily || daily.date !== today;
+};
+
+// Save daily participation
+await updateDoc(userRef, {
+'dailyShowcase.date': today,
+'dailyShowcase.participated': true,
+'dailyShowcase.bestScore': totalScore,
+});
+
+
+Create a complete trick showcase mini-game with:
+- Trick selection (3 tricks)
+- Timing-based mini-game
+- NPC judge scoring
+- Tier system (S/A/B/C/D)
+- Mastery progression
+- Daily competitions
+- Gem rewards
+
+Create a weekly community raid system where all players collaborate to defeat a boss representing unhealthy habits.
+
+REQUIREMENTS:
+
+1. CREATE SCREEN: /screens/CommunityRaidScreen.js
+
+2. BOSS SYSTEM:
+
+const RAID_BOSSES = [
+
+{ id: 'stress_mon
+ter', name: 'Stress
+Monster',
+icon: '😰', description: 'A creature born from accumulated st
+ess and anxiety', maxHealth: 1000000, // 1 million
+HP (communit
+effort) image: '👹', weaknesses: ['
+editation'
+'mood_checkins'], rewards: { defeat: { gems:
+100, cosmetic: 'stress_slaye
+_b
+dg
+'
+}, participa
+ion: { gems: 25 }, }
+}, {
+id: 'sleep_thief', name: 'The Sleep Thief',
+icon: '😴', des
+ription: 'St
+als restful nights fro
+the unwar
+', maxHealth: 1000000, image: '🌙', weaknes
+es: ['sleep'], rewards:
+
+
+
+efeat: { gems: 100, co
+metic: 'dream_guardian_s
+in' },
+participation: { gems: 25 }, }, }, {
+d: 'sedentary_beast
+, name:
+Sedentary Beast', icon: '🛋️',
+descri
+tion: 'Keeps people glued to their seats', maxH
+alth: 1000000, image: ' 
+',
+
+
+eaknesses: ['steps', 'e
+ercise'], rewards: {
+defeat
+{ gems: 100, cosmetic: 'active_hero_hat' },
+participation:
+gems: 25 },
+}, }, { id: 'junk_
+ood_dragon
+, name: 'Junk Food Dragon', icon: '🍔', descriptio
+: 'Tempts with unhealthy cra
+in
+s'
+// Rotate bosses weekly
+const getCurrentBoss = () => {
+const weekNumber = getWeekNumber(new Date()
+; const bossIndex = weekNumber % RAID_BOSSES.len
+th; return RAID_BOSSES[bossI
+function getWeekNumber(date) {
+const firstDayOfYear = new Date(date.getFullYear(), 0, 1
+; const pastDaysOfYear = (date - firstDayOfYear) / 86400
+00; return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1)
+
+
+3. RAID SCREEN UI:
+
+export default function CommunityRaidScreen() {
+const [currentBoss, setCurrentBoss] = useState(null
+; const [raidData, setRaidData] = useState(nu
+l); const [userContribution, setUserContribution] = useSta
+e(0); const [hasContributedToday, setHasContributedToday] = useState
+false); const [topContributors, setTopContributors] = use
+useEffect(() => {
+loadRaidDat
+(); const interval = setInterval(loadRaidData, 30000); // Refresh e
+ery 30s return () => clearInterva
+const loadRaidData = async () => {
+// Get current
+oss const boss = getCurrent
+
+// Get raid progress from Firebase
+const raidRef = doc(db, 'communityRaids', boss.id);
+const raidDoc = await getDoc(raidRef);
+
+if (raidDoc.exists()) {
+  setRaidData(raidDoc.data());
+} else {
+  // Initialize new raid
+  await setDoc(raidRef, {
+    bossId: boss.id,
+    currentHealth: boss.maxHealth,
+    maxHealth: boss.maxHealth,
+    participants: 0,
+    totalDamage: 0,
+    weekStart: getWeekStart(),
+    weekEnd: getWeekEnd(),
+    defeated: false,
+  });
+}
+
+// Get user's contribution
+const userRef = doc(db, 'users', auth.currentUser.uid);
+const userDoc = await getDoc(userRef);
+const userData = userDoc.data();
+
+setUserContribution(userData.raidContribution || 0);
+
+const today = new Date().toDateString();
+const lastContribution = userData.lastRaidContribution?.toDate().toDateString();
+setHasContributedToday(lastContribution === today);
+
+// Get top contributors
+const contributorsQuery = query(
+  collection(db, 'users'),
+  orderBy('raidContribution', 'desc'),
+  limit(10)
+);
+const contributorsSnapshot = await getDocs(contributorsQuery);
+setTopContributors(contributorsSnapshot.docs.map(doc => ({
+  id: doc.id,
+  ...doc.data()
+})));
+
+// Calculate time remaining
+const endDate = getWeekEnd();
+const now = new Date();
+const diff = endDate - now;
+const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+setTimeRemaining(`${days}d ${hours}h`);
+};
+
+const handleContribute = async () => {
+if (hasContributedToda
+) { Alert.alert('Already Contributed', 'You can contribute once p
+r day!'
+// Calculate damage based on today's health activities
+const userRef = doc(db, 'users', auth.currentUser.uid);
+const userDoc = await getDoc(userRef);
+const todayXP = userDoc.data().todayXP || 0; // Track daily XP separately
+
+if (todayXP === 0) {
+  Alert.alert(
+    'No Activities Today',
+    'Track your health activities first to contribute damage to the raid boss!'
+  );
+  return;
+}
+
+// Damage = daily XP earned
+const damage = todayXP;
+
+// Apply weakness multiplier
+const weaknessBonus = calculateWeaknessBonus(currentBoss, userDoc.data());
+const finalDamage = Math.round(damage * (1 + weaknessBonus));
+
+// Update raid boss health
+const raidRef = doc(db, 'communityRaids', currentBoss.id);
+await updateDoc(raidRef, {
+  currentHealth: increment(-finalDamage),
+  totalDamage: increment(finalDamage),
+  participants: increment(1),
+});
+
+// Update user contribution
+await updateDoc(userRef, {
+  raidContribution: increment(finalDamage),
+  lastRaidContribution: new Date(),
+});
+
+Alert.alert(
+  '⚔️ Damage Dealt!',
+  `You dealt ${finalDamage} damage to ${currentBoss.name}!` +
+  (weaknessBonus > 0 ? `\n\n🎯 Weakness bonus: +${Math.round(weaknessBonus * 100)}%!` : '')
+);
+
+loadRaidData();
+};
+
+const calculateWeaknessBonus = (boss, userData) => {
+// Check if user's activities today match boss weakne
+ses const activities = userData.todayActivitie
+
+boss.weaknesses.forEach(weakness => {
+  if (weakness === 'meditation' && activities.meditation > 0) bonusMultiplier += 0.2;
+  if (weakness === 'mood_checkins' && activities.moodCheckins >= 3) bonusMultiplier += 0.2;
+  if (weakness === 'sleep' && activities.sleep >= 8) bonusMultiplier += 0.2;
+  if (weakness === 'steps' && activities.steps >= 10000) bonusMultiplier += 0.2;
+  if (weakness === 'healthy_meals' && activities.healthyMeals >= 3) bonusMultiplier += 0.2;
+});
+
+return bonusMultiplier;
+
+};
+
+if (!currentBoss || !raidData) {
+return <V<View style={styles.loading}><Text>Loading raid...</Text></View>;
+const healthPercentage = (raidData.currentHealth / raidData.maxHealth) * 100;
+return (
+<ScrollView style={styles.container}>
+{/* Head
+<View style={styles.header}>
+<Text style={styles.title}>Community Raid</Text>
+<Text style={styles.timer}>⏰ Ends in: {timeRemaining}</Text>
+</View>
+
+  {/* Boss Display */}
+  <View style={styles.bossCard}>
+    <Text style={styles.bossImage}>{currentBoss.image}</Text>
+    <Text style={styles.bossName}>{currentBoss.name}</Text>
+    <Text style={styles.bossDescription}>{currentBoss.description}</Text>
+
+    {/* Boss Health Bar */}
+    <View style={styles.healthBarContainer}>
+      <View style={styles.healthBarBg}>
+        <View 
+          style={[
+            styles.healthBarFill,
+            { width: `${Math.max(0, healthPercentage)}%` },
+            isDefeated && styles.healthBarDefeated
+          ]} 
+        />
+      </View>
+      <Text style={styles.healthText}>
+        {isDefeated ? 'DEFEATED!' : `${raidData.currentHealth.toLocaleString()} / ${raidData.maxHealth.toLocaleString()} HP`}
+      </Text>
+    </View>
+
+    {/* Weaknesses */}
+    <View style={styles.weaknesses}>
+      <Text style={styles.weaknessLabel}>🎯 Weaknesses:</Text>
+      <View style={styles.weaknessList}>
+        {currentBoss.weaknesses.map(w => (
+          <Text key={w} style={styles.weaknessItem}>
+            {getWeaknessIcon(w)} {w.replace('_', ' ')}
+          </Text>
+        ))}
+      </View>
+    </View>
+  </View>
+
+  {/* Raid Stats */}
+  <View style={styles.statsCard}>
+    <View style={styles.statRow}>
+      <Text style={styles.statLabel}>👥 Participants</Text>
+      <Text style={styles.statValue}>{raidData.participants.toLocaleString()}</Text>
+    </View>
+    <View style={styles.statRow}>
+      <Text style={styles.statLabel}>💥 Total Damage</Text>
+      <Text style={styles.statValue}>{raidData.totalDamage.toLocaleString()}</Text>
+    </View>
+    <View style={styles.statRow}>
+      <Text style={styles.statLabel}>⚔️ Your Contribution</Text>
+      <Text style={styles.statValue}>{userContribution.toLocaleString()}</Text>
+    </View>
+  </View>
+
+  {/* Contribute Button */}
+  {!isDefeated && (
+    <TouchableOpacity
+      style={[
+        styles.contributeBtn,
+        hasContributedToday && styles.contributeBtnDisabled
+      ]}
+      onPress={handleContribute}
+      disabled={hasContributedToday}
+    >
+      <Text style={styles.contributeBtnText}>
+        {hasContributedToday ? '✓ Contributed Today' : '⚔️ Attack Boss'}
+      </Text>
+    </TouchableOpacity>
+  )}
+
+  {/* Rewards Preview */}
+  <View style={styles.rewardsCard}>
+    <Text style={styles.rewardsTitle}>
+      {isDefeated ? '🎉 Victory Rewards!' : '🎁 Potential Rewards'}
+    </Text>
+    <Text style={styles.rewardItem}>
+      🏆 Defeat Boss: {currentBoss.rewards.defeat.gems} gems + {currentBoss.rewards.defeat.cosmetic}
+    </Text>
+    <Text style={styles.rewardItem}>
+      ✨ Participation: {currentBoss.rewards.participation.gems} gems
+    </Text>
+  </View>
+
+  {/* Top Contributors */}
+  <View style={styles.contributorsCard}>
+    <Text style={styles.contributorsTitle}>🔥 Top Contributors</Text>
+    {topContributors.map((contributor, index) => (
+      <View key={contributor.id} style={styles.contributorRow}>
+        <Text style={styles.contributorRank}>
+          {index + 1 <= 3 ? ['🥇', '🥈', '🥉'][index] : `#${index + 1}`}
+        </Text>
+        <Text style={styles.contributorName}>{contributor.username}</Text>
+        <Text style={styles.contributorDamage}>
+          {contributor.raidContribution?.toLocaleString() || 0} dmg
+        </Text>
+      </View>
+    ))}
+  </View>
+
+  <View style={{ height: 40 }} />
+</ScrollView>
+
+);
+function getWeaknessIcon(weakness) {
+const icons =
+{ meditation:
+'🧘', mood_check
+ns: '😊',
+sleep: '😴'
+steps: '👟
+, exercise: '🏃'
+
+healthy_meals: '🥗', };
+function getWeekStart() {
+const now = new Date(
+; const day = now.getDa
+(); const diff = now.getDate() - day + (day === 0 ? -6 : 1); //
+onday return new Date(now.setDate
+function getWeekEnd() {
+const start = getWeekStart(
+; return new Date(start.getTime() + 7 * 24 * 60 * 60 * 10
+
+
+4. WEEKLY RESET & REWARD DISTRIBUTION:
+
+// Cloud Function or scheduled task
+exports.weeklyRaidReset = functions.pubsub
+.schedule('every monday 00:00
+) .onRun(async (context)
+> { const raidsRef = admin.firestore().collection('community
+
+for (const raidDoc of raidsSnapshot.docs) {
+  const raid = raidDoc.data();
+  const boss = RAID_BOSSES.find(b => b.id === raid.bossId);
+  
+  const defeated = raid.currentHealth <= 0;
+
+  // Get all participants
+  const participantsQuery = await admin.firestore()
+    .collection('users')
+    .where('lastRaidContribution', '>=', raid.weekStart)
+    .get();
+
+  const batch = admin.firestore().batch();
+
+  participantsQuery.docs.forEach(userDoc => {
+    const userRef = admin.firestore().collection('users').doc(userDoc.id);
+    const rewards = defeated ? boss.rewards.defeat : boss.rewards.participation;
+
+    // Award gems
+    batch.update(userRef, {
+      gems: admin.firestore.FieldValue.increment(rewards.gems),
+      raidContribution: 0, // Reset weekly contribution
+    });
+
+    // Award exclusive cosmetic if defeated
+    if (defeated && rewards.cosmetic) {
+      batch.update(userRef, {
+        'pets.0.ownedCosmetics': admin.firestore.FieldValue.arrayUnion(rewards.cosmetic)
+      });
+    }
+
+    // Log reward
+    batch.set(userRef.collection('rewardHistory').doc(), {
+      type: 'community_raid',
+      bossId: raid.bossId,
+      defeated,
+      gems: rewards.gems,
+      cosmetic: defeated ? rewards.cosmetic : null,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  await batch.commit();
+
+  // Delete old raid
+  await raidDoc.ref.delete();
+}
+
+console.log('Weekly raid reset complete');
+
+});
+
+
+5. TRACK DAILY XP FOR RAIDS:
+
+Update TrackScreen.js to track daily XP separately:
+
+// In handleSubmit
+await updateDoc(userRef, {
+totalXP: increment(earnedXP
+, weeklyXP: increment(earned
+P), todayXP: earnedXP, // Set (not increment) for daily tr
+cking todayActiv
+ties: { steps: pars
+Int(steps), sleep: parseFl
+at(sleepHours
+, healthyMeals, meditation: pars
+Int(meditationMinutes), moodChe
+ki
+
+
+Create a complete community raid system with:
+- Weekly rotating bosses
+- Real-time health tracking
+- Weakness mechanics for bonus damage
+- Top contributors leaderboard
+- Participation and victory rewards
+- Exclusive cosmetics for defeating bosses
+- Automatic weekly reset
+
+Implement a premium "Health Champion" subscription with multiple tiers and benefits.
+
+REQUIREMENTS:
+
+1. CREATE SUBSCRIPTION MANAGER:
+
+// utils/subscriptionManager.js
+
+export const SUBSCRIPTION_TIERS = {
+free: {
+id: 'free',
+name: 'Free',
+price: 0,
+features: {
+petSlots: 1,
+energyCap: 100,
+energyRegen: 1, // per 10 min
+gemMultiplier: 1.0,
+ads: true,
+premiumPets: false,
+earlyAccess: false,
+weeklyBonus: 0,
+customNames: false,
+},
+},
+monthly: {
+id: 'health_champion_monthly',
+name: 'Health Champion',
+price: 9.99,
+period: 'month',
+features: {
+petSlots: 3,
+energyCap: 200,
+energyRegen: 2, // per 10 min
+gemMultiplier: 2.0,
+ads: false,
+premiumPets: true,
+earlyAccess: true,
+weeklyBonus: 100,
+customNames: true,
+},
+},
+yearly: {
+id: 'health_champion_yearly',
+name: 'Health Champion (Annual)',
+price: 79.99,
+period: 'year',
+discount: '33% OFF',
+features: {
+petSlots: 3,
+energyCap: 200,
+energyRegen: 2,
+gemMultiplier: 2.0,
+ads: false,
+premiumPets: true,
+earlyAccess: true,
+weeklyBonus: 100,
+customNames: true,
+},
+},
+};
+
+export const checkSubscriptionStatus = async (userId) => {
+const userDoc = await getDoc(doc(db, 'users', userId));
+const subscription = userDoc.data().subscription || { tier: 'free' };
+
+// Check if subscription expired
+if (subscription.expiresAt && new Date() > subscription.expiresAt.toDate()) {
+return { ...SUBSCRIPTION_TIERS.free, expired: true };
+}
+
+return SUBSCRIPTION_TIERS[subscription.tier] || SUBSCRIPTION_TIERS.free;
+};
+
+export const getFeature = async (userId, featureName) => {
+const subscription = await checkSubscriptionStatus(userId);
+return subscription.features[featureName];
+};
+
+
+2. CREATE SUBSCRIPTION SCREEN:
+
+// screens/SubscriptionScreen.js
+
+export default function SubscriptionScreen({ navigation }) {
+const [currentTier, setCurrentTier] = useState('free');
+const [loading, setLoading] = useState(false);
+
+useEffect(() => {
+loadSubscription();
+}, []);
+
+const loadSubscription = async () => {
+const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+const sub = userDoc.data().subscription || { tier: 'free' };
+setCurrentTier(sub.tier);
+};
+
+const handleSubscribe = async (tierId) => {
+setLoading(true);
+
+try {
+  // For MVP - simulate purchase
+  // In production, integrate with Stripe/RevenueCat
+  
+  Alert.alert(
+    'Subscription',
+    'In production, this would open payment flow.\n\nFor demo: Activating premium...'
+  );
+
+  const expiresAt = tierId === 'health_champion_yearly'
+    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+    subscription: {
+      tier: tierId,
+      purchasedAt: new Date(),
+      expiresAt: expiresAt,
+    },
+    petSlots: 3,
+    energyCap: 200,
+  });
+
+  Alert.alert('Success!', 'Premium activated! 🎉');
+  loadSubscription();
+} catch (error) {
+  Alert.alert('Error', error.message);
+} finally {
+  setLoading(false);
+}
+
+};
+
+return (
+<ScrollView style={styles.container}>
+<View style={styles.header}>
+<Text style={styles.title}>Upgrade to Premium</Text>
+<Text style={styles.subtitle}>Unlock exclusive features and boost your progress</Text>
+</View>
+
+  {/* Free Tier */}
+  <View style={[styles.tierCard, currentTier === 'free' && styles.currentTier]}>
+    <View style={styles.tierHeader}>
+      <Text style={styles.tierName}>Free</Text>
+      {currentTier === 'free' && <Text style={styles.currentBadge}>Current</Text>}
+    </View>
+    <Text style={styles.tierPrice}>$0</Text>
+    
+    <View style={styles.features}>
+      <Feature icon="🐾" text="1 pet slot" />
+      <Feature icon="⚡" text="100 energy cap" />
+      <Feature icon="💎" text="1x gem earning" />
+      <Feature icon="📺" text="Ads between battles" />
+    </View>
+  </View>
+
+  {/* Monthly Tier */}
+  <View style={[styles.tierCard, styles.premiumCard, currentTier === 'health_champion_monthly' && styles.currentTier]}>
+    <View style={styles.popularBadge}>
+      <Text style={styles.popularText}>MOST POPULAR</Text>
+    </View>
+    
+    <View style={styles.tierHeader}>
+      <Text style={styles.tierName}>Health Champion</Text>
+      {currentTier === 'health_champion_monthly' && <Text style={styles.currentBadge}>Current</Text>}
+    </View>
+    <Text style={styles.tierPrice}>$9.99<Text style={styles.period}>/month</Text></Text>
+    
+    <View style={styles.features}>
+      <Feature icon="🐾" text="3 pet slots" premium />
+      <Feature icon="⚡" text="200 energy cap" premium />
+      <Feature icon="💎" text="2x gem earning" premium />
+      <Feature icon="🚫" text="Ad-free experience" premium />
+      <Feature icon="✨" text="Exclusive premium pets" premium />
+      <Feature icon="🎁" text="100 gems weekly bonus" premium />
+      <Feature icon="🔓" text="Early access to features" premium />
+      <Feature icon="✏️" text="Custom pet names" premium />
+    </View>
+
+    {currentTier !== 'health_champion_monthly' && (
+      <TouchableOpacity
+        style={styles.subscribeBtn}
+        onPress={() => handleSubscribe('health_champion_monthly')}
+        disabled={loading}
+      >
+        <Text style={styles.subscribeBtnText}>
+          {loading ? 'Processing...' : 'Subscribe Monthly'}
+        </Text>
+      </TouchableOpacity>
+    )}
+  </View>
+
+  {/* Yearly Tier */}
+  <View style={[styles.tierCard, styles.premiumCard, currentTier === 'health_champion_yearly' && styles.currentTier]}>
+    <View style={styles.savingsBadge}>
+      <Text style={styles.savingsText}>SAVE 33%</Text>
+    </View>
+    
+    <View style={styles.tierHeader}>
+      <Text style={styles.tierName}>Health Champion (Annual)</Text>
+      {currentTier === 'health_champion_yearly' && <Text style={styles.currentBadge}>Current</Text>}
+    </View>
+    <Text style={styles.tierPrice}>
+      $79.99<Text style={styles.period}>/year</Text>
+    </Text>
+    <Text style={styles.savings}>Only $6.67/month - Save $40!</Text>
+    
+    <View style={styles.features}>
+      <Feature icon="🐾" text="3 pet slots" premium />
+      <Feature icon="⚡" text="200 energy cap" premium />
+      <Feature icon="💎" text="2x gem earning" premium />
+      <Feature icon="🚫" text="Ad-free experience" premium />
+      <Feature icon="✨" text="Exclusive premium pets" premium />
+      <Feature icon="🎁" text="100 gems weekly bonus" premium />
+      <Feature icon="🔓" text="Early access to features" premium />
+      <Feature icon="✏️" text="Custom pet names" premium />
+    </View>
+
+    {currentTier !== 'health_champion_yearly' && (
+      <TouchableOpacity
+        style={[styles.subscribeBtn, styles.subscribeBtnYearly]}
+        onPress={() => handleSubscribe('health_champion_yearly')}
+        disabled={loading}
+      >
+        <Text style={styles.subscribeBtnText}>
+          {loading ? 'Processing...' : 'Subscribe Annually'}
+        </Text>
+      </TouchableOpacity>
+    )}
+  </View>
+
+  {/* Benefits Explanation */}
+  <View style={styles.benefitsSection}>
+    <Text style={styles.benefitsTitle}>Why Upgrade?</Text>
+    
+    <View style={styles.benefit}>
+      <Text style={styles.benefitIcon}>🚀</Text>
+      <View style={styles.benefitText}>
+        <Text style={styles.benefitTitle}>Progress Faster</Text>
+        <Text style={styles.benefitDesc}>
+          2x gems means quicker pet upgrades and customization
+        </Text>
+      </View>
+    </View>
+
+    <View style={styles.benefit}>
+      <Text style={styles.benefitIcon}>🎮</Text>
+      <View style={styles.benefitText}>
+        <Text style={styles.benefitTitle}>More Pet Variety</Text>
+        <Text style={styles.benefitDesc}>
+          Train up to 3 pets simultaneously with unique builds
+        </Text>
+      </View>
+    </View>
+
+    <View style={styles.benefit}>
+      <Text style={styles.benefitIcon}>⚡</Text>
+      <View style={styles.benefitText}>
+        <Text style={styles.benefitTitle}>Play More</Text>
+        <Text style={styles.benefitDesc}>
+          200 energy cap and faster regen = more battles
+        </Text>
+      </View>
+    </View>
+
+    <View style={styles.benefit}>
+      <Text style={styles.benefitIcon}>✨</Text>
+      <View style={styles.benefitText}>
+        <Text style={styles.benefitTitle}>Exclusive Content</Text>
+        <Text style={styles.benefitDesc}>
+          Access premium pets and early features
+        </Text>
+      </View>
+    </View>
+  </View>
+
+  <View style={{ height: 60 }} />
+</ScrollView>
+
+);
+}
+
+const Feature = ({ icon, text, premium }) => (
+<View style={styles.feature}>
+<Text style={styles.featureIcon}>{premium ? '✓' : icon}</Text>
+<Text style={[styles.featureText, premium && styles.featureTextPremium]}>
+{text}
+</Text>
+</View>
+);
+
+
+3. INTEGRATE PREMIUM FEATURES:
+
+**In GemShop - 2x Multiplier:**
+const handlePurchase = async (item) => {
+const subscription = await checkSubscriptionStatus(auth.currentUser.uid);
+const actualCost = Math.round(item.cost / subscription.features.gemMultiplier);
+
+// Premium users pay less effective gems (earn 2x, so items feel cheaper)
+Alert.alert(
+'Purchase',
+Buy ${item.name} for ${actualCost} gems? +
+(subscription.features.gemMultiplier > 1 ? '\n\n✨ Premium discount applied!' : '')
+);
+};
+
+
+**In Battle Screens - Energy Cap:**
+const loadUserData = async () => {
+const subscription = await checkSubscriptionStatus(auth.currentUser.uid);
+const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+
+setUserEnergy(Math.min(
+userDoc.data().energy || 0,
+subscription.features.energyCap
+));
+};
+
+
+**In Pet Selection - Premium Pets:**
+
+const PREMIUM_PETS = [
+{
+id: 'phoenix',
+name: 'Phoenix',
+type: 'Mythical Bird',
+premium: true,
+baseStats: { /* Enhanced stats / },
+},
+{
+id: 'dragon',
+name: 'Dragon',
+type: 'Legendary Beast',
+premium: true,
+baseStats: { / Enhanced stats */ },
+},
+];
+
+// In pet selection screen
+{pet.premium && !hasPremium && (
+<View style={styles.premiumLock}>
+<Text style={styles.lockIcon}>🔒</Text>
+<Text style={styles.lockText}>Premium Only</Text>
+</View>
+)}
+
+
+**Weekly Gem Bonus:**
+
+// Cloud function - runs every Monday
+exports.weeklyPremiumBonus = functions.pubsub
+.schedule('every monday 00:00')
+.onRun(async (context) => {
+const premiumUsers = await admin.firestore()
+.collection('users')
+.where('subscription.tier', 'in', ['health_champion_monthly', 'health_champion_yearly'])
+.get();
+
+const batch = admin.firestore().batch();
+
+premiumUsers.docs.forEach(doc => {
+  batch.update(doc.ref, {
+    gems: admin.firestore.FieldValue.increment(100)
+  });
+});
+
+await batch.commit();
+
+});
+
+
+4. GEM PACKS (IAP):
+
+
+/ screens/GemStoreScreen.js
+
+const GEM_PACKS = [
+{ id: 'gems_100', gems: 100, price: 0.99, bonus: 0 },
+{ id: 'gems_500', gems: 500, price: 3.99, bonus: 0.2 }, // 20% bonus
+{ id: 'gems_1200', gems: 1200, price: 7.99, bonus: 0.4 }, // 40% bonus
+{ id: 'gems_3000', gems: 3000, price: 14.99, bonus: 0.6 }, // 60% bonus
+];
+
+const handleBuyGems = async (pack) => {
+// Integrate with Expo IAP or RevenueCat
+Alert.alert(
+'Purchase Gems',
+Buy ${pack.gems + Math.round(pack.gems * pack.bonus)} gems for $${pack.price}? +
+(pack.bonus > 0 ? \n\n🎁 +${Math.round(pack.bonus * 100)}% BONUS! : '')
+);
+
+// After successful purchase
+const totalGems = pack.gems + Math.round(pack.gems * pack.bonus);
+await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+gems: increment(totalGems)
+});
+};
+
+
+Create complete subscription system with:
+- Free and premium tiers
+- Feature gating
+- Weekly bonuses
+- Premium-only content
+- Gem pack purchases
+- Clear value proposition
+
+
+Implement push notifications and engagement triggers to improve retention.
+
+REQUIREMENTS:
+
+1. SETUP EXPO NOTIFICATIONS:
+
+
+npx expo install expo-notifications
+
+undefined
+// utils/notificationManager.js
+
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { Platform } from 'react-native';
+
+// Configure notification behavior
+Notifications.setNotificationHandler({
+handleNotification: async () => ({
+shouldShowAlert: true,
+shouldPlaySound: true,
+shouldSetBadge: true,
+}),
+});
+
+export const registerForPushNotifications = async () => {
+let token;
+
+if (Device.isDevice) {
+const { status: existingStatus } = await Notifications.getPermissionsAsync();
+let finalStatus = existingStatus;
+
+if (existingStatus !== 'granted') {
+  const { status } = await Notifications.requestPermissionsAsync();
+  finalStatus = status;
+}
+
+if (finalStatus !== 'granted') {
+  alert('Failed to get push token for notifications!');
+  return;
+}
+
+token = (await Notifications.getExpoPushTokenAsync()).data;
+
+}
+
+if (Platform.OS === 'android') {
+Notifications.setNotificationChannelAsync('default', {
+name: 'default',
+importance: Notifications.AndroidImportance.MAX,
+vibrationPattern: ,
+lightColor: '#32808D',
+});
+}
+
+return token;
+};
+
+export const scheduleNotification = async (title, body, trigger) => {
+await Notifications.scheduleNotificationAsync({
+content: {
+title,
+body,
+data: { screen: trigger.screen || 'Home' },
+},
+trigger,
+});
+};
+
+
+2. NOTIFICATION TRIGGERS:
+
+
+// utils/engagementTriggers.js
+
+import { scheduleNotification } from './notificationManager';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
+
+export const ENGAGEMENT_TRIGGERS = {
+// Daily reminder
+dailyCheckIn: {
+id: 'daily_checkin',
+title: '🌟 Good morning!',
+body: 'Your pet is waiting! Track your health activities to level up.',
+trigger: {
+hour: 9,
+minute: 0,
+repeats: true,
+},
+screen: 'Track',
+},
+
+// Inactive user
+petMissing: {
+id: 'pet_missing',
+title: '😢 Your pet misses you!',
+body: "It's been 2 days. Come back and continue your health journey!",
+trigger: {
+seconds: 48 * 60 * 60, // 48 hours
+},
+screen: 'Home',
+condition: async (userId) => {
+const userDoc = await getDoc(doc(db, 'users', userId));
+const lastActive = userDoc.data().lastActive?.toDate();
+const hoursSinceActive = (Date.now() - lastActive) / (1000 * 60 * 60);
+return hoursSinceActive >= 48;
+},
+},
+
+// Streak reminder
+streakReminder: {
+id: 'streak_reminder',
+title: '🔥 Don't break your streak!',
+body: '7-day streak! Log your mood to keep it alive.',
+trigger: {
+hour: 20,
+minute: 0,
+repeats: true,
+},
+screen: 'Track',
+condition: async (userId) => {
+const userDoc = await getDoc(doc(db, 'users', userId));
+const streak = userDoc.data().dailyStreak || 0;
+const lastTracked = userDoc.data().lastTrackedDate?.toDate().toDateString();
+const today = new Date().toDateString();
+return streak >= 7 && lastTracked !== today;
+},
+},
+
+// Energy full
+energyFull: {
+id: 'energy_full',
+title: '⚡ Energy at max!',
+body: 'Your energy is full! Time for some battles.',
+trigger: {
+repeats: true,
+seconds: 60 * 60, // Check every hour
+},
+screen: 'Battle',
+condition: async (userId) => {
+const userDoc = await getDoc(doc(db, 'users', userId));
+const subscription = await checkSubscriptionStatus(userId);
+return userDoc.data().energy >= subscription.features.energyCap;
+},
+},
+
+// Level up available
+levelUpReady: {
+id: 'level_up_ready',
+title: '🎉 Level up available!',
+body: 'You have enough XP! Check your pet to level up.',
+trigger: null, // Immediate
+screen: 'Pet',
+},
+
+// Friend activity
+friendBattle: {
+id: 'friend_battle',
+title: '⚔️ Battle Challenge!',
+body: 'Alex challenged you to a Pet Battle!',
+trigger: null, // Immediate
+screen: 'Battle',
+},
+
+// Raid boss
+raidBoss: {
+id: 'raid_boss',
+title: '🐉 New Raid Boss!',
+body: 'The Stress Monster appeared! Join the community raid.',
+trigger: null, // Immediate (sent Monday morning)
+screen: 'CommunityRaid',
+},
+
+// Weekly rewards
+weeklyRewards: {
+id: 'weekly_rewards',
+title: '🏆 Weekly Rewards Ready!',
+body: 'You earned rewards from the leaderboard! Claim them now.',
+trigger: null, // Immediate (sent Monday after calculation)
+screen: 'Leaderboard',
+},
+};
+
+export const scheduleEngagementNotifications = async (userId) => {
+// Register for notifications
+const token = await registerForPushNotifications();
+
+if (!token) return;
+
+// Save token to Firebase
+await updateDoc(doc(db, 'users', userId), {
+pushToken: token,
+});
+
+// Schedule repeating notifications
+Object.values(ENGAGEMENT_TRIGGERS).forEach(async (trigger) => {
+if (trigger.trigger && trigger.trigger.repeats) {
+// Check condition if exists
+if (trigger.condition) {
+const shouldSchedule = await trigger.condition(userId);
+if (!shouldSchedule) return;
+}
+
+  await scheduleNotification(
+    trigger.title,
+    trigger.body,
+    trigger.trigger
+  );
+}
+
+});
+};
+
+export const sendImmediateNotification = async (userId, triggerId, customData = {}) => {
+const trigger = ENGAGEMENT_TRIGGERS[triggerId];
+
+if (!trigger) return;
+
+const userDoc = await getDoc(doc(db, 'users', userId));
+const pushToken = userDoc.data().pushToken;
+
+if (!pushToken) return;
+
+// Send via Expo Push Notification service
+const message = {
+to: pushToken,
+sound: 'default',
+title: customData.title || trigger.title,
+body: customData.body || trigger.body,
+data: { screen: trigger.screen, ...customData },
+};
+
+await fetch('https://exp.host/--/api/v2/push/send', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+},
+body: JSON.stringify(message),
+});
+};
+
+
+
+3. IN-APP NOTIFICATION CENTER:
+
+// components/NotificationBell.js
+
+export default function NotificationBell({ navigation }) {
+const [unreadCount, setUnreadCount] = useState(0);
+const [notifications, setNotifications] = useState([]);
+
+useEffect(() => {
+loadNotifications();
+const interval = setInterval(loadNotifications, 60000); // Check every minute
+return () => clearInterval(interval);
+}, []);
+
+const loadNotifications = async () => {
+const userRef = doc(db, 'users', auth.currentUser.uid);
+const notifRef = collection(userRef, 'notifications');
+const q = query(notifRef, orderBy('timestamp', 'desc'), limit(20));
+const snapshot = await getDocs(q);
+const notifs = snapshot.docs.map(doc => ({
+  id: doc.id,
+  ...doc.data()
+}));
+
+setNotifications(notifs);
+setUnreadCount(notifs.filter(n => !n.read).length);
+};
+
+const markAsRead = async (notifId) => {
+const notifRef = doc(
+db,
+'users',
+auth.currentUser.uid,
+'notifications',
+notifId
+);
+await updateDoc(notifRef, { read: true });
+loadNotifications();
+};
+
+return (
+<View style={styles.container}>
+<TouchableOpacity onPress={() => setShowDropdown(!showDropdown)}>
+<View style={styles.bellIcon}>
+<Text style={styles.bell}>🔔</Text>
+{unreadCount > 0 && (
+<View style={styles.badge}>
+<Text style={styles.badgeText}>{unreadCount}</Text>
+</View>
+)}
+</View>
+</TouchableOpacity>
+  {showDropdown && (
+    <View style={styles.dropdown}>
+      <Text style={styles.dropdownTitle}>Notifications</Text>
+      {notifications.length === 0 ? (
+        <Text style={styles.empty}>No notifications</Text>
+      ) : (
+        notifications.map(notif => (
+          <TouchableOpacity
+            key={notif.id}
+            style={[styles.notif, !notif.read && styles.unread]}
+            onPress={() => {
+              markAsRead(notif.id);
+              if (notif.screen) {
+                navigation.navigate(notif.screen);
+              }
+            }}
+          >
+            <Text style={styles.notifTitle}>{notif.title}</Text>
+            <Text style={styles.notifBody}>{notif.body}</Text>
+            <Text style={styles.notifTime}>
+              {formatTimeAgo(notif.timestamp)}
+            </Text>
+          </TouchableOpacity>
+        ))
+      )}
+    </View>
+  )}
+</View>
+);
+}
+
+
+4. INTEGRATE INTO APP:
+
+// In App.js or main navigator
+
+useEffect(() => {
+// Register for notifications on app start
+scheduleEngagementNotifications(auth.currentUser?.uid);
+
+// Listen for notification taps
+const subscription = Notifications.addNotificationResponseReceivedListener(
+response => {
+const screen = response.notification.request.content.data.screen;
+if (screen) {
+navigation.navigate(screen);
+}
+}
+);
+
+return () => subscription.remove();
+}, []);
+
+
+5. CLOUD FUNCTIONS FOR AUTOMATIC TRIGGERS:
+
+// Send raid boss notification on Monday
+exports.sendRaidBossNotification = functions.pubsub
+.schedule('every monday 00:05')
+.onRun(async (context) => {
+const usersSnapshot = await admin.firestore().collection('users').get();
+
+const messages = usersSnapshot.docs
+  .filter(doc => doc.data().pushToken)
+  .map(doc => ({
+    to: doc.data().pushToken,
+    sound: 'default',
+    title: '🐉 New Raid Boss!',
+    body: 'A new challenge awaits! Join the community raid.',
+    data: { screen: 'CommunityRaid' },
+  }));
+
+// Send in batches of 100
+for (let i = 0; i < messages.length; i += 100) {
+  const batch = messages.slice(i, i + 100);
+  await fetch('https://exp.host/--/api/v2/push/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(batch),
+  });
+}
+});
+
+
+
+Create comprehensive engagement system with:
+- Push notification setup
+- Multiple trigger types
+- Conditional notifications
+- In-app notification center
+- Automatic cloud triggers
+- User preference controls
+
+Create a comprehensive onboarding flow that teaches users the app while collecting their first health data.
+
+REQUIREMENTS:
+
+1. ONBOARDING FLOW:
+
+// screens/OnboardingScreen.js
+
+export default function OnboardingScreen({ navigation }) {
+const [step, setStep] = useState(0);
+const [userData, setUserData] = useState({
+username: '',
+selectedPet: null,
+goals: [],
+});
+
+const steps = [
+{
+id: 'welcome',
+component: <WelcomeStep onNext={() => setStep(1)} />,
+},
+{
+id: 'username',
+component: (
+<UsernameStep
+value={userData.username}
+onChange={(username) => setUserData({ ...userData, username })}
+onNext={() => setStep(2)}
+/>
+),
+},
+{
+id: 'pet_selection',
+component: (
+<PetSelectionStep
+selected={userData.selectedPet}
+onSelect={(pet) => setUserData({ ...userData, selectedPet: pet })}
+onNext={() => setStep(3)}
+/>
+),
+},
+{
+id: 'goals',
+component: (
+<GoalsStep
+selected={userData.goals}
+onToggle={(goal) => {
+const newGoals = userData.goals.includes(goal)
+? userData.goals.filter(g => g !== goal)
+: [...userData.goals, goal];
+setUserData({ ...userData, goals: newGoals });
+}}
+onNext={() => setStep(4)}
+/>
+),
+},
+{
+id: 'tutorial',
+component: <TutorialStep onComplete={completeOnboarding} />,
+},
+];
+
+const completeOnboarding = async () => {
+// Save user data
+await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+username: userData.username,
+selectedPet: userData.selectedPet.id,
+pets: [{
+...userData.selectedPet,
+level: 1,
+currentXP: 0,
+evolutionTier: 1,
+}],
+healthGoals: userData.goals,
+onboardingComplete: true,
+onboardingCompletedAt: new Date(),
+});
+// Navigate to main app
+navigation.replace('MainTabs');
+};
+
+return (
+<View style={styles.container}>
+{/* Progress indicator */}
+<View style={styles.progressBar}>
+{steps.map((_, index) => (
+<View
+key={index}
+style={[
+styles.progressDot,
+index <= step && styles.progressDotActive
+]}
+/>
+))}
+</View>
+  {/* Current step */}
+  {steps[step].component}
+</View>
+);
+}
+
+
+2. ONBOARDING STEPS:
+
+// WelcomeStep
+const WelcomeStep = ({ onNext }) => (
+<View style={styles.step}>
+<Text style={styles.logo}>🐾</Text>
+<Text style={styles.title}>Welcome to PetFit Champions!</Text>
+<Text style={styles.description}>
+Build healthy habits while raising and battling virtual pets.
+Your health activities power your pet's growth!
+</Text>
+
+<View style={styles.features}>
+  <Feature icon="📊" text="Track daily health activities" />
+  <Feature icon="🐕" text="Level up adorable pets" />
+  <Feature icon="⚔️" text="Battle other players" />
+  <Feature icon="🏆" text="Earn rewards and cosmetics" />
+</View>
+
+<TouchableOpacity style={styles.nextBtn} onPress={onNext}>
+  <Text style={styles.nextBtnText}>Get Started</Text>
+</TouchableOpacity>
+</View> );
+// UsernameStep
+const UsernameStep = ({ value, onChange, onNext }) => (
+<View style={styles.step}>
+<Text style={styles.title}>What should we call you?</Text>
+<TextInput style={styles.input} placeholder="Enter your username" value={value} onChangeText={onChange} maxLength={20} autoFocus />
+<Text style={styles.hint}>
+This will be visible to other players
+</Text>
+<TouchableOpacity
+  style={[styles.nextBtn, !value && styles.nextBtnDisabled]}
+  onPress={onNext}
+  disabled={!value}
+>
+  <Text style={styles.nextBtnText}>Continue</Text>
+</TouchableOpacity>
+
+</View> );
+// GoalsStep
+const GoalsStep = ({ selected, onToggle, onNext }) => {
+const goals = [
+{ id: 'weight', icon: '⚖️', name: 'Weight Management' },
+{ id: 'fitness', icon: '💪', name: 'Build Fitness' },
+{ id: 'sleep', icon: '😴', name: 'Better Sleep' },
+{ id: 'stress', icon: '🧘', name: 'Reduce Stress' },
+{ id: 'energy', icon: '⚡', name: 'More Energy' },
+{ id: 'consistency', icon: '🔥', name: 'Build Consistency' },
+];
+
+return (
+<View style={styles.step}>
+<Text style={styles.title}>What are your health goals?</Text>
+<Text style={styles.subtitle}>Select all that apply</Text>
+  <View style={styles.goalsGrid}>
+    {goals.map(goal => (
+      <TouchableOpacity
+        key={goal.id}
+        style={[
+          styles.goalCard,
+          selected.includes(goal.id) && styles.goalCardSelected
+        ]}
+        onPress={() => onToggle(goal.id)}
+      >
+        <Text style={styles.goalIcon}>{goal.icon}</Text>
+        <Text style={styles.goalName}>{goal.name}</Text>
+        {selected.includes(goal.id) && (
+          <Text style={styles.checkmark}>✓</Text>
+        )}
+      </TouchableOpacity>
+    ))}
+  </View>
+
+  <TouchableOpacity
+    style={[styles.nextBtn, selected.length === 0 && styles.nextBtnDisabled]}
+    onPress={onNext}
+    disabled={selected.length === 0}
+  >
+    <Text style={styles.nextBtnText}>Continue</Text>
+  </TouchableOpacity>
+</View>
+);
+};
+
+// TutorialStep
+const TutorialStep = ({ onComplete }) => {
+const [page, setPage] = useState(0);
+
+const pages = [
+{
+icon: '📊',
+title: 'Track Your Health',
+description: 'Log daily activities like steps, sleep, meals, and mood. Each activity earns XP!',
+image: '(screenshot of tracking screen)',
+},
+{
+icon: '🐾',
+title: 'Your Pet Grows',
+description: 'As you earn XP, your pet levels up and gets stronger. Watch it evolve through 3 tiers!',
+image: '(pet evolution illustration)',
+},
+{
+icon: '⚔️',
+title: 'Battle & Compete',
+description: 'Challenge other players, practice with bots, or compete in community raids!',
+image: '(battle screen)',
+},
+{
+icon: '💎',
+title: 'Earn & Customize',
+description: 'Win gems to buy cosmetics, boost stats, and unlock special abilities!',
+image: '(gem shop)',
+},
+];
+
+return (
+<View style={styles.step}>
+<Text style={styles.tutorialIcon}>{pages[page].icon}</Text>
+<Text style={styles.title}>{pages[page].title}</Text>
+<Text style={styles.description}>{pages[page].description}</Text>
+  <View style={styles.pagination}>
+    {pages.map((_, index) => (
+      <View
+        key={index}
+        style={[
+          styles.paginationDot,
+          index === page && styles.paginationDotActive
+        ]}
+      />
+    ))}
+  </View>
+
+  <View style={styles.tutorialButtons}>
+    {page > 0 && (
+      <TouchableOpacity
+        style={styles.backBtn}
+        onPress={() => setPage(page - 1)}
+      >
+        <Text style={styles.backBtnText}>Back</Text>
+      </TouchableOpacity>
+    )}
+
+    <TouchableOpacity
+      style={styles.nextBtn}
+      onPress={() => {
+        if (page < pages.length - 1) {
+          setPage(page + 1);
+        } else {
+          onComplete();
+        }
+      }}
+    >
+      <Text style={styles.nextBtnText}>
+        {page < pages.length - 1 ? 'Next' : 'Start Your Journey!'}
+      </Text>
+    </TouchableOpacity>
+  </View>
+</View>
+);
+};
+
+
+3. FIRST-TIME USER EXPERIENCE (FTUE):
+
+// After onboarding, show interactive tooltips
+
+const FTUE_TOOLTIPS = [
+{
+screen: 'Home',
+target: 'track_button',
+title: 'Track Your First Activity',
+message: 'Tap here to log your health activities and earn XP!',
+arrow: 'down',
+},
+{
+screen: 'Track',
+target: 'submit_button',
+title: 'Submit Your Activities',
+message: 'Fill in your activities and tap submit to earn XP!',
+arrow: 'up',
+},
+{
+screen: 'Pet',
+target: 'pet_display',
+title: 'Your Pet Leveled Up!',
+message: 'Your pet gained a level! Stats have increased.',
+arrow: 'down',
+},
+];
+
+// components/Tooltip.js
+export default function Tooltip({ target, title, message, arrow, onDismiss }) {
+return (
+<View style={styles.overlay}>
+<View style={[styles.spotlight, getSpotlightPosition(target)]} />
+  <View style={[styles.tooltip, getTooltipPosition(target, arrow)]}>
+    {arrow && <View style={[styles.arrow, styles[`arrow${arrow}`]]} />}
+    <Text style={styles.tooltipTitle}>{title}</Text>
+    <Text style={styles.tooltipMessage}>{message}</Text>
+    <TouchableOpacity style={styles.dismissBtn} onPress={onDismiss}>
+      <Text style={styles.dismissBtnText}>Got it!</Text>
+    </TouchableOpacity>
+  </View>
+</View>
+);
+}
+
+
+Create complete onboarding with:
+- Welcome screens
+- Username setup
+- Pet selection
+- Goal setting
+- Interactive tutorial
+- Progress indicators
+- FTUE tooltips
+- Smooth transitions
+
+PET CARE & FEEDING SYSTEM
+Create an emotional bonding system where users can care for their pets through petting, feeding, and interaction. Premium food items provide stat boosts.
+
+REQUIREMENTS:
+
+1. CREATE PET CARE SCREEN:
+
+// screens/PetCareScreen.js
+
+export default function PetCareScreen({ navigation }) {
+const [petData, setPetData] = useState(null);
+const [petMood, setPetMood] = useState('happy'); // happy, neutral, sad, hungry
+const [lastFed, setLastFed] = useState(null);
+const [lastPetted, setLastPetted] = useState(null);
+const [emotionalBond, setEmotionalBond] = useState(0); // 0-100
+const [foodInventory, setFoodInventory] = useState([]);
+const [isPremium, setIsPremium] = useState(false);
+const [pettingAnimation, setPettingAnimation] = useState(false);
+
+useEffect(() => {
+loadPetData();
+const interval = setInterval(updatePetMood, 60000); // Update mood every minute
+return () => clearInterval(interval);
+}, []);
+
+const loadPetData = async () => {
+const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+const data = userDoc.data();
+setPetData(data.pets);
+setLastFed(data.pets.lastFed?.toDate());
+setLastPetted(data.pets.lastPetted?.toDate());
+setEmotionalBond(data.pets.emotionalBond || 0);
+setFoodInventory(data.foodInventory || []);
+
+// Check premium status
+const subscription = await checkSubscriptionStatus(auth.currentUser.uid);
+setIsPremium(subscription.id !== 'free');
+
+calculatePetMood(data.pets);
+
+};
+
+const calculatePetMood = (pet) => {
+const now = Date.now();
+const lastFedTime = pet.lastFed?.toDate().getTime() || 0;
+const lastPettedTime = pet.lastPetted?.toDate().getTime() || 0;
+const hoursSinceFed = (now - lastFedTime) / (1000 * 60 * 60);
+const hoursSincePetted = (now - lastPettedTime) / (1000 * 60 * 60);
+
+if (hoursSinceFed > 24) {
+  setPetMood('hungry');
+} else if (hoursSincePetted > 48) {
+  setPetMood('sad');
+} else if (hoursSincePetted < 2 && hoursSinceFed < 6) {
+  setPetMood('happy');
+} else {
+  setPetMood('neutral');
+}
+
+};
+
+const updatePetMood = () => {
+if (petData) {
+calculatePetMood(petData);
+}
+};
+
+const handlePetting = async () => {
+const now = new Date();
+const lastPettedTime = lastPetted?.getTime() || 0;
+const hoursSincePetted = (now - lastPettedTime) / (1000 * 60 * 60);
+
+if (hoursSincePetted < 1) {
+  Alert.alert('Recently Petted', 'Your pet needs some space. Try again in an hour!');
+  return;
+}
+
+// Trigger petting animation
+setPettingAnimation(true);
+setTimeout(() => setPettingAnimation(false), 2000);
+
+// Increase emotional bond
+const bondIncrease = 2; // 2 points per petting
+const newBond = Math.min(100, emotionalBond + bondIncrease);
+setEmotionalBond(newBond);
+setLastPetted(now);
+
+// Update Firebase
+const userRef = doc(db, 'users', auth.currentUser.uid);
+const userDoc = await getDoc(userRef);
+const pets = userDoc.data().pets;
+
+pets.lastPetted = now;
+pets.emotionalBond = newBond;
+
+await updateDoc(userRef, { pets });
+
+// Show feedback
+const messages = [
+  '🥰 Your pet purrs with happiness!',
+  '😊 Your pet loves the attention!',
+  '💕 Your bond grows stronger!',
+  '✨ Your pet feels special!',
+];
+
+Alert.alert('Aww!', messages[Math.floor(Math.random() * messages.length)]);
+
+calculatePetMood(pets);
+
+};
+
+const handleFeeding = async (foodItem) => {
+const now = new Date();
+const lastFedTime = lastFed?.getTime() || 0;
+const hoursSinceFed = (now - lastFedTime) / (1000 * 60 * 60);
+
+// Free food limit check
+if (!foodItem.premium && hoursSinceFed < 24) {
+  Alert.alert(
+    'Not Hungry Yet',
+    'Your pet can only eat free food once per day. Try premium food or wait!'
+  );
+  return;
+}
+
+// Check if user has this food
+const hasFood = foodInventory.find(f => f.id === foodItem.id && f.quantity > 0);
+
+if (!hasFood && foodItem.premium) {
+  Alert.alert('No Food', `You don't have any ${foodItem.name}. Purchase from the shop!`);
+  return;
+}
+
+// Feed the pet
+const userRef = doc(db, 'users', auth.currentUser.uid);
+const userDoc = await getDoc(userRef);
+const pets = userDoc.data().pets;
+
+// Apply food effects
+const updatedStats = { ...pets.baseStats };
+
+if (foodItem.statBoosts) {
+  Object.keys(foodItem.statBoosts).forEach(stat => {
+    updatedStats[stat] = Math.min(100, updatedStats[stat] + foodItem.statBoosts[stat]);
+  });
+}
+
+pets.baseStats = updatedStats;
+pets.lastFed = now;
+pets.emotionalBond = Math.min(100, (pets.emotionalBond || 0) + foodItem.bondIncrease);
+
+// Decrease food inventory if premium
+let updatedInventory = foodInventory;
+if (foodItem.premium) {
+  updatedInventory = foodInventory.map(f => 
+    f.id === foodItem.id ? { ...f, quantity: f.quantity - 1 } : f
+  ).filter(f => f.quantity > 0);
+}
+
+await updateDoc(userRef, {
+  pets,
+  foodInventory: updatedInventory,
+});
+
+setLastFed(now);
+setEmotionalBond(pets.emotionalBond);
+setFoodInventory(updatedInventory);
+setPetData(pets);
+
+// Show results
+let message = `${foodItem.name} eaten!\n\n`;
+if (foodItem.statBoosts) {
+  message += 'Stat changes:\n';
+  Object.keys(foodItem.statBoosts).forEach(stat => {
+    message += `${stat}: +${foodItem.statBoosts[stat]}\n`;
+  });
+}
+message += `\n💕 Bond: +${foodItem.bondIncrease}`;
+
+Alert.alert('Fed!', message);
+calculatePetMood(pets);
+
+
+};
+
+const getMoodEmoji = () => {
+switch(petMood) {
+case 'happy': return '😊';
+case 'neutral': return '😐';
+case 'sad': return '😢';
+case 'hungry': return '😋';
+default: return '🐾';
+}
+};
+
+const getMoodMessage = () => {
+switch(petMood) {
+case 'happy': return 'Your pet is very happy!';
+case 'neutral': return 'Your pet is doing okay';
+case 'sad': return 'Your pet needs attention...';
+case 'hungry': return 'Your pet is hungry!';
+default: return '';
+}
+};
+
+const getBondLevel = () => {
+if (emotionalBond >= 90) return { level: 'Best Friends', color: '#FFD700', icon: '💖' };
+if (emotionalBond >= 70) return { level: 'Close Bond', color: '#FF69B4', icon: '💕' };
+if (emotionalBond >= 50) return { level: 'Good Friends', color: '#87CEEB', icon: '💙' };
+if (emotionalBond >= 30) return { level: 'Friendly', color: '#90EE90', icon: '💚' };
+return { level: 'Getting Acquainted', color: '#D3D3D3', icon: '🤍' };
+};
+
+if (!petData) {
+return <View style={styles.loading}><Text>Loading...</Text></View>;
+}
+
+const bondLevel = getBondLevel();
+
+return (
+<ScrollView style={styles.container}>
+{/* Header */}
+<View style={styles.header}>
+<Text style={styles.title}>Pet Care</Text>
+<Text style={styles.subtitle}>Build your bond through care</Text>
+</View>
+  {/* Pet Display */}
+  <View style={styles.petDisplay}>
+    <TouchableOpacity
+      style={styles.petContainer}
+      onPress={handlePetting}
+      activeOpacity={0.8}
+    >
+      <View style={styles.petImageContainer}>
+        {/* Pet Image/Animation would go here */}
+        <Text style={[styles.petEmoji, pettingAnimation && styles.petEmojiAnimated]}>
+          🐾
+        </Text>
+        
+        {pettingAnimation && (
+          <View style={styles.heartAnimation}>
+            <Text style={styles.floatingHeart}>💕</Text>
+          </View>
+        )}
+      </View>
+      
+      <Text style={styles.petName}>{petData.name}</Text>
+      <Text style={styles.tapHint}>👆 Tap to pet</Text>
+    </TouchableOpacity>
+
+    {/* Mood Indicator */}
+    <View style={styles.moodCard}>
+      <Text style={styles.moodEmoji}>{getMoodEmoji()}</Text>
+      <Text style={styles.moodText}>{getMoodMessage()}</Text>
+    </View>
+  </View>
+
+  {/* Emotional Bond */}
+  <View style={styles.bondCard}>
+    <View style={styles.bondHeader}>
+      <Text style={styles.bondIcon}>{bondLevel.icon}</Text>
+      <Text style={styles.bondLevel}>{bondLevel.level}</Text>
+    </View>
+    
+    <View style={styles.bondBar}>
+      <View 
+        style={[
+          styles.bondFill, 
+          { width: `${emotionalBond}%`, backgroundColor: bondLevel.color }
+        ]} 
+      />
+    </View>
+    
+    <Text style={styles.bondValue}>{emotionalBond}/100</Text>
+    
+    <Text style={styles.bondBenefits}>
+      💡 Higher bond = better battle performance!
+    </Text>
+  </View>
+
+  {/* Care Stats */}
+  <View style={styles.statsCard}>
+    <Text style={styles.statsTitle}>Care History</Text>
+    
+    <View style={styles.statRow}>
+      <Text style={styles.statIcon}>🤗</Text>
+      <Text style={styles.statLabel}>Last Petted</Text>
+      <Text style={styles.statValue}>
+        {lastPetted ? formatTimeAgo(lastPetted) : 'Never'}
+      </Text>
+    </View>
+
+    <View style={styles.statRow}>
+      <Text style={styles.statIcon}>🍖</Text>
+      <Text style={styles.statLabel}>Last Fed</Text>
+      <Text style={styles.statValue}>
+        {lastFed ? formatTimeAgo(lastFed) : 'Never'}
+      </Text>
+    </View>
+  </View>
+
+  {/* Feeding Section */}
+  <View style={styles.feedingCard}>
+    <Text style={styles.feedingTitle}>🍖 Feed Your Pet</Text>
+
+    {/* Free Food */}
+    <View style={styles.foodSection}>
+      <Text style={styles.foodSectionTitle}>Free Food (Once Daily)</Text>
+      
+      {FREE_FOOD_ITEMS.map(food => (
+        <FoodItem
+          key={food.id}
+          food={food}
+          onFeed={() => handleFeeding(food)}
+          canUse={!lastFed || (Date.now() - lastFed.getTime()) > 24 * 60 * 60 * 1000}
+        />
+      ))}
+    </View>
+
+    {/* Premium Food */}
+    <View style={styles.foodSection}>
+      <View style={styles.premiumHeader}>
+        <Text style={styles.foodSectionTitle}>Premium Food</Text>
+        {!isPremium && <Text style={styles.premiumBadge}>Premium Only</Text>}
+      </View>
+      
+      {PREMIUM_FOOD_ITEMS.map(food => {
+        const inventory = foodInventory.find(f => f.id === food.id);
+        const quantity = inventory?.quantity || 0;
+        
+        return (
+          <FoodItem
+            key={food.id}
+            food={food}
+            quantity={quantity}
+            onFeed={() => handleFeeding(food)}
+            canUse={isPremium && quantity > 0}
+            isPremium={!isPremium}
+          />
+        );
+      })}
+      
+      <TouchableOpacity
+        style={styles.shopBtn}
+        onPress={() => navigation.navigate('FoodShop')}
+      >
+        <Text style={styles.shopBtnText}>🛒 Buy Premium Food</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+
+  <View style={{ height: 40 }} />
+</ScrollView>
+
+);
+}
+
+// Food Item Component
+const FoodItem = ({ food, quantity, onFeed, canUse, isPremium }) => (
+<View style={styles.foodItem}>
+<View style={styles.foodInfo}>
+<Text style={styles.foodIcon}>{food.icon}</Text>
+<View style={styles.foodDetails}>
+<Text style={styles.foodName}>{food.name}</Text>
+<Text style={styles.foodDescription}>{food.description}</Text>
+    {food.statBoosts && (
+      <View style={styles.boosts}>
+        {Object.entries(food.statBoosts).map(([stat, value]) => (
+          <Text key={stat} style={styles.boostText}>
+            +{value} {stat}
+          </Text>
+        ))}
+      </View>
+    )}
+    
+    {quantity !== undefined && (
+      <Text style={styles.quantity}>Owned: {quantity}</Text>
+    )}
+  </View>
+</View>
+
+<TouchableOpacity
+  style={[
+    styles.feedBtn,
+    (!canUse || isPremium) && styles.feedBtnDisabled
+  ]}
+  onPress={onFeed}
+  disabled={!canUse || isPremium}
+>
+  <Text style={styles.feedBtnText}>
+    {isPremium ? '🔒' : 'Feed'}
+  </Text>
+</TouchableOpacity>
+
+</View> );
+function formatTimeAgo(date) {
+const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+
+if (seconds < 60) return 'Just now';
+if (seconds < 3600) return ${Math.floor(seconds / 60)}m ago;
+if (seconds < 86400) return ${Math.floor(seconds / 3600)}h ago;
+return ${Math.floor(seconds / 86400)}d ago;
+}
+
+
+2. FOOD ITEMS CONFIGURATION:
+
+// config/foodItems.js
+
+export const FREE_FOOD_ITEMS = [
+{
+id: 'basic_kibble',
+name: 'Basic Kibble',
+icon: '🍚',
+description: 'Simple nutrition for your pet',
+premium: false,
+bondIncrease: 1,
+statBoosts: null, // No stat changes for free food
+},
+{
+id: 'water',
+name: 'Fresh Water',
+icon: '💧',
+description: 'Keep your pet hydrated',
+premium: false,
+bondIncrease: 1,
+statBoosts: null,
+},
+];
+
+export const PREMIUM_FOOD_ITEMS = [
+{
+id: 'protein_feast',
+name: 'Protein Feast',
+icon: '🍖',
+description: 'High-quality meat increases strength',
+premium: true,
+cost: 50, // gems
+bondIncrease: 3,
+statBoosts: {
+strength: 2,
+attack: 1,
+},
+},
+{
+id: 'energy_smoothie',
+name: 'Energy Smoothie',
+icon: '🥤',
+description: 'Boosts energy and stamina',
+premium: true,
+cost: 40,
+bondIncrease: 3,
+statBoosts: {
+energy: 2,
+stamina: 1,
+},
+},
+{
+id: 'agility_treat',
+name: 'Agility Treat',
+icon: '🍪',
+description: 'Improves speed and reflexes',
+premium: true,
+cost: 45,
+bondIncrease: 3,
+statBoosts: {
+agility: 3,
+},
+},
+{
+id: 'defense_crunchies',
+name: 'Defense Crunchies',
+icon: '🥜',
+description: 'Fortifies defenses and health',
+premium: true,
+cost: 50,
+bondIncrease: 3,
+statBoosts: {
+defense: 2,
+health: 1,
+},
+},
+{
+id: 'super_steak',
+name: 'Super Steak',
+icon: '🥩',
+description: 'Ultimate meal - boosts all stats!',
+premium: true,
+cost: 100,
+bondIncrease: 5,
+statBoosts: {
+strength: 1,
+defense: 1,
+agility: 1,
+stamina: 1,
+health: 2,
+},
+},
+{
+id: 'rainbow_cake',
+name: 'Rainbow Cake',
+icon: '🎂',
+description: 'Birthday special - massive bond boost',
+premium: true,
+cost: 75,
+bondIncrease: 10,
+statBoosts: null,
+},
+];
+
+
+3. FOOD SHOP SCREEN:
+
+// screens/FoodShopScreen.js
+
+export default function FoodShopScreen({ navigation }) {
+const [userGems, setUserGems] = useState(0);
+const [foodInventory, setFoodInventory] = useState([]);
+const [isPremium, setIsPremium] = useState(false);
+
+useEffect(() => {
+loadShopData();
+}, []);
+
+const loadShopData = async () => {
+const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+const data = userDoc.data();
+setUserGems(data.gems || 0);
+setFoodInventory(data.foodInventory || []);
+
+const subscription = await checkSubscriptionStatus(auth.currentUser.uid);
+setIsPremium(subscription.id !== 'free');
+
+};
+
+const handlePurchase = async (food) => {
+if (!isPremium) {
+Alert.alert(
+'Premium Required',
+'Premium food is only available to Health Champion subscribers!',
+[
+{ text: 'Cancel', style: 'cancel' },
+{ text: 'View Premium', onPress: () => navigation.navigate('Subscription') },
+]
+);
+return;
+}
+if (userGems < food.cost) {
+  Alert.alert(
+    'Not Enough Gems',
+    `You need ${food.cost - userGems} more gems.`
+  );
+  return;
+}
+
+Alert.alert(
+  'Purchase Food',
+  `Buy ${food.name} for ${food.cost} gems?`,
+  [
+    { text: 'Cancel', style: 'cancel' },
+    {
+      text: 'Buy',
+      onPress: async () => {
+        try {
+          const userRef = doc(db, 'users', auth.currentUser.uid);
+          const userDoc = await getDoc(userRef);
+          const currentInventory = userDoc.data().foodInventory || [];
+          
+          // Add to inventory
+          const existingIndex = currentInventory.findIndex(f => f.id === food.id);
+          let updatedInventory;
+          
+          if (existingIndex >= 0) {
+            updatedInventory = currentInventory.map((f, i) =>
+              i === existingIndex ? { ...f, quantity: f.quantity + 1 } : f
+            );
+          } else {
+            updatedInventory = [...currentInventory, { id: food.id, quantity: 1 }];
+          }
+
+          await updateDoc(userRef, {
+            gems: increment(-food.cost),
+            foodInventory: updatedInventory,
+          });
+
+          Alert.alert('Purchased!', `You bought ${food.name}!`);
+          loadShopData();
+        } catch (error) {
+          Alert.alert('Error', error.message);
+        }
+      },
+    },
+  ]
+);
+};
+
+return (
+<ScrollView style={styles.container}>
+<View style={styles.header}>
+<Text style={styles.title}>🛒 Food Shop</Text>
+<View style={styles.gemBalance}>
+<Text style={styles.gemIcon}>💎</Text>
+<Text style={styles.gemAmount}>{userGems}</Text>
+</View>
+</View>
+  {!isPremium && (
+    <View style={styles.premiumPromo}>
+      <Text style={styles.promoText}>
+        🌟 Premium food available to Health Champions only
+      </Text>
+      <TouchableOpacity
+        style={styles.upgradeBtn}
+        onPress={() => navigation.navigate('Subscription')}
+      >
+        <Text style={styles.upgradeBtnText}>Upgrade to Premium</Text>
+      </TouchableOpacity>
+    </View>
+  )}
+
+  <View style={styles.shopGrid}>
+    {PREMIUM_FOOD_ITEMS.map(food => {
+      const inventory = foodInventory.find(f => f.id === food.id);
+      const quantity = inventory?.quantity || 0;
+
+      return (
+        <View key={food.id} style={styles.foodCard}>
+          <Text style={styles.foodCardIcon}>{food.icon}</Text>
+          <Text style={styles.foodCardName}>{food.name}</Text>
+          <Text style={styles.foodCardDesc}>{food.description}</Text>
+
+          {food.statBoosts && (
+            <View style={styles.foodCardBoosts}>
+              {Object.entries(food.statBoosts).map(([stat, value]) => (
+                <Text key={stat} style={styles.boostTag}>
+                  +{value} {stat.charAt(0).toUpperCase() + stat.slice(1)}
+                </Text>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.foodCardFooter}>
+            <View style={styles.priceTag}>
+              <Text style={styles.priceGems}>{food.cost}</Text>
+              <Text style={styles.priceIcon}>💎</Text>
+            </View>
+
+            {quantity > 0 && (
+              <Text style={styles.owned}>Owned: {quantity}</Text>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.buyBtn,
+              !isPremium && styles.buyBtnLocked
+            ]}
+            onPress={() => handlePurchase(food)}
+            disabled={!isPremium}
+          >
+            <Text style={styles.buyBtnText}>
+              {isPremium ? 'Buy' : '🔒 Premium'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    })}
+  </View>
+
+  <View style={{ height: 40 }} />
+</ScrollView>
+);
+}
+
+
+4. BOND BONUSES IN BATTLE:
+
+// Update battleLogic.js to include bond bonus
+
+export const calculateDamageWithBond = (attackerPet, defenderPet, moveType, emotionalBond) => {
+let baseDamage = calculateDamage(attackerPet, defenderPet, moveType);
+
+// Bond bonus: 0-20% extra damage based on bond level
+const bondBonus = (emotionalBond / 100) * 0.2;
+const finalDamage = Math.round(baseDamage * (1 + bondBonus));
+
+return finalDamage;
+};
+
+export const getBondBattleBonus = (emotionalBond) => {
+return {
+damageBonus: Math.round((emotionalBond / 100) * 20), // 0-20%
+defenseBonus: Math.round((emotionalBond / 100) * 10), // 0-10%
+critBonus: Math.round((emotionalBond / 100) * 5), // 0-5%
+};
+};
+
+
+
+5. ADD TO NAVIGATION:
+
+// Add Pet Care to main navigation
+
+<Tab.Screen
+name="PetCare"
+component={PetCareScreen}
+options={{
+tabBarIcon: ({ color, size }) => (
+<Icon name="heart" size={size} color={color} />
+),
+}}
+/>
+
+
+6. DAILY CARE REMINDERS:
+
+// Add to engagement triggers
+
+export const CARE_REMINDERS = {
+feedingReminder: {
+title: '🍖 Feeding Time!',
+body: 'Your pet is hungry! Feed them to keep them happy.',
+trigger: {
+hour: 18,
+minute: 0,
+repeats: true,
+},
+condition: async (userId) => {
+const userDoc = await getDoc(doc(db, 'users', userId));
+const lastFed = userDoc.data().pets.lastFed?.toDate();
+const hoursSinceFed = (Date.now() - lastFed) / (1000 * 60 * 60);
+return hoursSinceFed >= 24;
+},
+},
+pettingReminder: {
+title: '🤗 Show Some Love!',
+body: 'Your pet misses you. Give them some attention!',
+trigger: {
+hour: 20,
+minute: 0,
+repeats: true,
+},
+condition: async (userId) => {
+const userDoc = await getDoc(doc(db, 'users', userId));
+const lastPetted = userDoc.data().pets.lastPetted?.toDate();
+const hoursSincePetted = (Date.now() - lastPetted) / (1000 * 60 * 60);
+return hoursSincePetted >= 24;
+},
+},
+};
+
+
+Create complete pet care system with:
+- Petting interaction with animations
+- Feeding system (free daily, premium unlimited)
+- Emotional bond tracking (0-100)
+- Mood states based on care
+- Premium food items with stat boosts
+- Food inventory management
+- Food shop with gem purchases
+- Bond bonuses in battles
+- Premium-only premium food access
+- Care reminders
+- Visual feedback and animations
