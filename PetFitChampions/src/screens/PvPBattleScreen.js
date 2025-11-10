@@ -6,7 +6,7 @@ import { PetContext } from '../context/PetContext';
 import { BATTLE_ACTIONS, COLORS } from '../data/constants';
 import { calculateDamage, getDefenseBonus, getAIAction } from '../utils/battleLogic';
 
-export default function BattleScreen({ route, navigation }) {
+export default function PvPBattleScreen({ route, navigation }) {
   const { opponent } = route.params;
   const { pet } = useContext(PetContext);
 
@@ -63,7 +63,7 @@ export default function BattleScreen({ route, navigation }) {
       if (newOpponentHealth <= 0) {
         setBattleEnded(true);
         setTimeout(() => {
-          navigation.replace('BattleResult', { victory: true });
+          navigation.replace('PvPResult', { victory: true });
         }, 1500);
       }
     }
@@ -94,7 +94,7 @@ export default function BattleScreen({ route, navigation }) {
       if (newPlayerHealth <= 0) {
         setBattleEnded(true);
         setTimeout(() => {
-          navigation.replace('BattleResult', { victory: false });
+          navigation.replace('PvPResult', { victory: false });
         }, 1500);
       }
     }

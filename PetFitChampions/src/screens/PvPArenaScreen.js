@@ -7,7 +7,7 @@ import { PetContext } from '../context/PetContext';
 import { BATTLE_CONSTANTS, COLORS } from '../data/constants';
 import { generateOpponent } from '../utils/battleLogic';
 
-export default function BattleMatchmakingScreen({ navigation }) {
+export default function PvPArenaScreen({ navigation }) {
   const { energy, consumeEnergy, hasEnoughEnergy, maxEnergy } = useContext(BattleContext);
   const { pet } = useContext(PetContext);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
@@ -28,7 +28,7 @@ export default function BattleMatchmakingScreen({ navigation }) {
         await consumeEnergy(BATTLE_CONSTANTS.ENERGY_COST);
         const opponent = generateOpponent(pet);
         
-        navigation.navigate('Battle', { opponent });
+        navigation.navigate('PvPBattle', { opponent });
       } catch (error) {
         setSnackbarMessage(error.message);
         setSnackbarVisible(true);

@@ -1,0 +1,522 @@
+Create a unified Battle screen with three battle mode options as selectable cards/buttons. When user taps a mode, navigate to that specific battle screen.
+
+STRUCTURE:
+
+Main file: /screens/BattleScreen.js (mode selector)
+Sub-screens:
+- /screens/battles/PvPArenaScreen.js
+- /screens/battles/BotArenaScreen.js  
+- /screens/battles/RunnerGameScreen.js
+
+BATTLESCREEN.JS IMPLEMENTATION:
+
+Create a mode selection screen that displays:
+
+1. Header Section:
+   - Title: "Battle Arena"
+   - Subtitle: "Choose your challenge"
+   - Energy display: "⚡ Energy: X/100"
+
+2. Three Mode Cards (vertical stack):
+   Each card shows:
+   - Mode icon (large, centered)
+   - Mode name
+   - Description (1-2 lines)
+   - Energy cost badge
+   - Gem potential (min-max)
+   - "Play" or "Enter" button
+   - Optional: Win/loss record for that mode
+
+3. Mode Cards Layout:
+
+CARD 1 - PvP Arena:
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+│    ⚔️                    │
+│  PvP Arena              │
+│  Battle real players    │
+│  and steal gems!        │
+│                         │
+│  💎 10-30 gems          │
+│  ⚡ 20 energy           │
+│                         │
+│  W: 5  L: 3             │
+│                         │
+│  [  ENTER ARENA  ]      │
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CARD 2 - Bot Arena:
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+│    🤖                    │
+│  Bot Arena              │
+│  Practice against AI    │
+│  with lower stakes      │
+│                         │
+│  💎 5-15 gems           │
+│  ⚡ 10 energy           │
+│                         │
+│  Easy: 10-2             │
+│  Med: 5-5  Hard: 2-8    │
+│                         │
+│  [  START PRACTICE  ]   │
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CARD 3 - Runner Game:
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+│    🏃                    │
+│  Pet Runner             │
+│  Endless obstacle       │
+│  course challenge       │
+│                         │
+│  💎 1 per 10 pts        │
+│  ⚡ 5 energy            │
+│                         │
+│  High Score: 127        │
+│  Today: 15/50 gems      │
+│                         │
+│  [   PLAY GAME   ]      │
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CODE STRUCTURE:
+
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
+
+export default function BattleScreen({ navigation }) {
+const [userEnergy, setUserEnergy] = useState(100);
+const [battleStats, setBattleStats] = useState({
+pvp: { wins: 0, losses: 0 },
+bot: { easy: {wins: 0, losses: 0}, medium: {wins: 0, losses: 0}, hard: {wins: 0, losses: 0} },
+runner: { highScore: 0, dailyGems: 0 }
+});
+
+useEffect(() => {
+loadBattleData();
+}, []);
+
+const loadBattleData = async () => {
+try {
+const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+const data = userDoc.data();
+  setUserEnergy(data.energy || 100);
+  setBattleStats({
+    pvp: { wins: data.wins || 0, losses: data.losses || 0 },
+    bot: data.botBattles || { easy: {wins: 0, losses: 0}, medium: {wins: 0, losses: 0}, hard: {wins: 0, losses: 0} },
+    runner: { 
+      highScore: data.runnerBestScore || 0, 
+      dailyGems: data.runnerDailyGems || 0 
+    }
+  });
+} catch (error) {
+  console.error('Error loading battle data:', error);
+}
+};
+
+const handleModeSelect = (mode, energyCost) => {
+if (userEnergy < energyCost) {
+Alert.alert(
+'Not Enough Energy',
+You need ${energyCost} energy for this mode. Current: ${userEnergy},
+[{ text: 'OK' }]
+);
+return;
+}
+// Navigate to specific battle screen
+switch(mode) {
+  case 'pvp':
+    navigation.navigate('PvPArena');
+    break;
+  case 'bot':
+    navigation.navigate('BotArena');
+    break;
+  case 'runner':
+    navigation.navigate('RunnerGame');
+    break;
+}
+};
+
+return (
+<ScrollView style={styles.container}>
+{/* Header */}
+<View style={styles.header}>
+<Text style={styles.title}>Battle Arena</Text>
+<Text style={styles.subtitle}>Choose your challenge</Text>
+</View>
+  {/* Energy Display */}
+  <View style={styles.energyBar}>
+    <Text style={styles.energyLabel}>⚡ Energy</Text>
+    <View style={styles.energyBarContainer}>
+      <View style={[styles.energyFill, { width: `${userEnergy}%` }]} />
+    </View>
+    <Text style={styles.energyValue}>{userEnergy}/100</Text>
+  </View>
+
+  {/* Mode Cards */}
+  <View style={styles.modesContainer}>
+    
+    {/* PvP Arena Card */}
+    <View style={styles.modeCard}>
+      <Text style={styles.modeIcon}>⚔️</Text>
+      <Text style={styles.modeName}>PvP Arena</Text>
+      <Text style={styles.modeDescription}>
+        Battle real players and steal their gems!
+      </Text>
+      
+      <View style={styles.modeDetails}>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>💎 Gems:</Text>
+          <Text style={styles.detailValue}>10-30</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>⚡ Cost:</Text>
+          <Text style={styles.detailValue}>20 energy</Text>
+        </View>
+      </View>
+
+      <View style={styles.statsRow}>
+        <Text style={styles.statsText}>
+          Wins: {battleStats.pvp.wins}
+        </Text>
+        <Text style={styles.statsText}>
+          Losses: {battleStats.pvp.losses}
+        </Text>
+      </View>
+
+      <TouchableOpacity
+        style={styles.enterButton}
+        onPress={() => handleModeSelect('pvp', 20)}
+      >
+        <Text style={styles.enterButtonText}>ENTER ARENA</Text>
+      </TouchableOpacity>
+    </View>
+
+    {/* Bot Arena Card */}
+    <View style={styles.modeCard}>
+      <Text style={styles.modeIcon}>🤖</Text>
+      <Text style={styles.modeName}>Bot Arena</Text>
+      <Text style={styles.modeDescription}>
+        Practice against AI with lower stakes
+      </Text>
+      
+      <View style={styles.modeDetails}>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>💎 Gems:</Text>
+          <Text style={styles.detailValue}>5-15</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>⚡ Cost:</Text>
+          <Text style={styles.detailValue}>10 energy</Text>
+        </View>
+      </View>
+
+      <View style={styles.botStatsGrid}>
+        <Text style={styles.botStatText}>
+          Easy: {battleStats.bot.easy.wins}-{battleStats.bot.easy.losses}
+        </Text>
+        <Text style={styles.botStatText}>
+          Med: {battleStats.bot.medium.wins}-{battleStats.bot.medium.losses}
+        </Text>
+        <Text style={styles.botStatText}>
+          Hard: {battleStats.bot.hard.wins}-{battleStats.bot.hard.losses}
+        </Text>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.enterButton, styles.botButton]}
+        onPress={() => handleModeSelect('bot', 10)}
+      >
+        <Text style={styles.enterButtonText}>START PRACTICE</Text>
+      </TouchableOpacity>
+    </View>
+
+    {/* Runner Game Card */}
+    <View style={styles.modeCard}>
+      <Text style={styles.modeIcon}>🏃</Text>
+      <Text style={styles.modeName}>Pet Runner</Text>
+      <Text style={styles.modeDescription}>
+        Endless obstacle course challenge
+      </Text>
+      
+      <View style={styles.modeDetails}>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>💎 Gems:</Text>
+          <Text style={styles.detailValue}>1 per 10 pts</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>⚡ Cost:</Text>
+          <Text style={styles.detailValue}>5 energy</Text>
+        </View>
+      </View>
+
+      <View style={styles.runnerStats}>
+        <Text style={styles.statsText}>
+          High Score: {battleStats.runner.highScore}
+        </Text>
+        <Text style={styles.dailyGems}>
+          Today: {battleStats.runner.dailyGems}/50 gems
+        </Text>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.enterButton, styles.runnerButton]}
+        onPress={() => handleModeSelect('runner', 5)}
+      >
+        <Text style={styles.enterButtonText}>PLAY GAME</Text>
+      </TouchableOpacity>
+    </View>
+
+  </View>
+
+  <View style={{ height: 40 }} />
+</ScrollView>
+);
+}
+
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: '#F5F5F5',
+},
+header: {
+backgroundColor: '#32808D',
+padding: 30,
+alignItems: 'center',
+},
+title: {
+fontSize: 28,
+fontWeight: 'bold',
+color: 'white',
+marginBottom: 5,
+},
+subtitle: {
+fontSize: 16,
+color: 'rgba(255,255,255,0.9)',
+},
+energyBar: {
+backgroundColor: 'white',
+marginHorizontal: 20,
+marginTop: -20,
+padding: 15,
+borderRadius: 10,
+shadowColor: '#000',
+shadowOffset: { width: 0, height: 2 },
+shadowOpacity: 0.1,
+shadowRadius: 4,
+elevation: 3,
+},
+energyLabel: {
+fontSize: 14,
+fontWeight: '600',
+marginBottom: 8,
+color: '#333',
+},
+energyBarContainer: {
+height: 12,
+backgroundColor: '#E0E0E0',
+borderRadius: 6,
+overflow: 'hidden',
+marginBottom: 5,
+},
+energyFill: {
+height: '100%',
+backgroundColor: '#4CAF50',
+},
+energyValue: {
+fontSize: 12,
+color: '#666',
+textAlign: 'right',
+},
+modesContainer: {
+padding: 20,
+},
+modeCard: {
+backgroundColor: 'white',
+borderRadius: 15,
+padding: 20,
+marginBottom: 20,
+shadowColor: '#000',
+shadowOffset: { width: 0, height: 2 },
+shadowOpacity: 0.1,
+shadowRadius: 4,
+elevation: 3,
+},
+modeIcon: {
+fontSize: 48,
+textAlign: 'center',
+marginBottom: 10,
+},
+modeName: {
+fontSize: 22,
+fontWeight: 'bold',
+color: '#333',
+textAlign: 'center',
+marginBottom: 8,
+},
+modeDescription: {
+fontSize: 14,
+color: '#666',
+textAlign: 'center',
+marginBottom: 15,
+lineHeight: 20,
+},
+modeDetails: {
+backgroundColor: '#F5F5F5',
+padding: 12,
+borderRadius: 8,
+marginBottom: 12,
+},
+detailRow: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+marginBottom: 5,
+},
+detailLabel: {
+fontSize: 14,
+color: '#666',
+},
+detailValue: {
+fontSize: 14,
+fontWeight: '600',
+color: '#32808D',
+},
+statsRow: {
+flexDirection: 'row',
+justifyContent: 'space-around',
+marginBottom: 15,
+paddingVertical: 8,
+borderTopWidth: 1,
+borderTopColor: '#E0E0E0',
+},
+statsText: {
+fontSize: 13,
+color: '#666',
+},
+botStatsGrid: {
+flexDirection: 'row',
+justifyContent: 'space-around',
+marginBottom: 15,
+paddingVertical: 8,
+borderTopWidth: 1,
+borderTopColor: '#E0E0E0',
+},
+botStatText: {
+fontSize: 12,
+color: '#666',
+},
+runnerStats: {
+alignItems: 'center',
+marginBottom: 15,
+paddingVertical: 8,
+borderTopWidth: 1,
+borderTopColor: '#E0E0E0',
+},
+dailyGems: {
+fontSize: 12,
+color: '#666',
+marginTop: 4,
+},
+enterButton: {
+backgroundColor: '#32808D',
+paddingVertical: 15,
+borderRadius: 10,
+alignItems: 'center',
+},
+botButton: {
+backgroundColor: '#5D9CEC',
+},
+runnerButton: {
+backgroundColor: '#A463BF',
+},
+enterButtonText: {
+color: 'white',
+fontSize: 16,
+fontWeight: 'bold',
+letterSpacing: 0.5,
+},
+});
+
+
+NAVIGATION SETUP:
+
+Update your AppNavigator.js to include all battle screens:
+
+// In your stack navigator
+<Stack.Screen name="BattleScreen" component={BattleScreen} />
+<Stack.Screen name="PvPArena" component={PvPArenaScreen} />
+<Stack.Screen name="BotArena" component={BotArenaScreen} />
+<Stack.Screen name="RunnerGame" component={RunnerGameScreen} />
+
+
+Or if using bottom tabs, update the Battle tab to show BattleScreen as initial:
+
+<Tab.Screen
+name="Battle"
+component={BattleScreen}
+options={{ headerShown: false }}
+/>
+
+
+BEHAVIOR:
+
+1. User taps Battle tab → sees mode selection screen
+2. User taps "ENTER ARENA" on PvP card → navigates to PvPArenaScreen
+3. User taps "START PRACTICE" on Bot card → navigates to BotArenaScreen
+4. User taps "PLAY GAME" on Runner card → navigates to RunnerGameScreen
+5. Each battle screen has back button to return to mode selection
+
+ENERGY VALIDATION:
+
+- Check energy before allowing mode entry
+- Show alert if insufficient energy
+- Display current energy prominently
+- Show energy cost on each card
+
+VISUAL POLISH:
+
+- Each mode card has unique color accent
+- PvP: Teal (#32808D)
+- Bot: Blue (#5D9CEC)
+- Runner: Purple (#A463BF)
+
+- Cards have subtle shadows
+- Icons are large and centered
+- Stats are easy to scan
+- Buttons are prominent and tappable
+
+Create this unified battle screen with clean navigation to sub-screens.
+Make cards visually distinct and easy to understand at a glance.
+
+Now create the three individual battle screens that are navigated to from BattleScreen:
+
+1. FILE: /screens/battles/PvPArenaScreen.js
+   - Copy existing PvP battle logic
+   - Add header with back button
+   - Title: "PvP Arena"
+   - Show "Finding opponent..." → Battle interface → Results
+   - On battle end, navigate back to BattleScreen
+
+2. FILE: /screens/battles/BotArenaScreen.js
+   - Difficulty selector (Easy/Medium/Hard) at top
+   - Selected difficulty highlights
+   - "Find Bot" button
+   - Same battle interface as PvP but with bot
+   - Show "Practice Mode" banner
+   - On battle end, navigate back to BattleScreen
+
+3. FILE: /screens/battles/RunnerGameScreen.js
+   - Game canvas full screen
+   - "Tap to Jump" instruction
+   - Score at top right
+   - Pause button top left
+   - Game over modal with results
+   - "Back to Modes" button on game over
+
+Each screen should:
+- Have a back button in header (← Battle Modes)
+- Use navigation.goBack() to return to BattleScreen
+- Deduct energy on game/battle start
+- Update Firebase with results
+- Show loading/transition states
+
+Create clean, focused screens for each mode.

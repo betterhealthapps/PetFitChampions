@@ -5,7 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PetContext } from '../context/PetContext';
 import { BATTLE_CONSTANTS, COLORS } from '../data/constants';
 
-export default function BattleResultScreen({ route, navigation }) {
+export default function PvPResultScreen({ route, navigation }) {
   const { victory } = route.params;
   const { gems, spendGems, addGems, setGems } = useContext(PetContext);
   const [gemChange, setGemChange] = useState(0);
@@ -39,7 +39,7 @@ export default function BattleResultScreen({ route, navigation }) {
   };
 
   const handleReturnToMatchmaking = () => {
-    navigation.navigate('BattleMatchmaking');
+    navigation.navigate('PvPArena');
   };
 
   const handleReturnHome = () => {

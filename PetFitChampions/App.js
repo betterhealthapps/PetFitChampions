@@ -17,9 +17,12 @@ import HomeScreen from './src/screens/HomeScreen';
 import TrackScreen from './src/screens/TrackScreen';
 import PetScreen from './src/screens/PetScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
-import BattleMatchmakingScreen from './src/screens/BattleMatchmakingScreen';
 import BattleScreen from './src/screens/BattleScreen';
-import BattleResultScreen from './src/screens/BattleResultScreen';
+import PvPArenaScreen from './src/screens/PvPArenaScreen';
+import PvPBattleScreen from './src/screens/PvPBattleScreen';
+import PvPResultScreen from './src/screens/PvPResultScreen';
+import BotArenaScreen from './src/screens/BotArenaScreen';
+import RunnerGameScreen from './src/screens/RunnerGameScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -45,13 +48,18 @@ function BattleStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen 
-        name="BattleMatchmaking" 
-        component={BattleMatchmakingScreen}
+        name="BattleModeSelector" 
+        component={BattleScreen}
         options={{ headerTitle: 'Battle Arena' }}
       />
       <Stack.Screen 
-        name="Battle" 
-        component={BattleScreen}
+        name="PvPArena" 
+        component={PvPArenaScreen}
+        options={{ headerTitle: 'PvP Arena' }}
+      />
+      <Stack.Screen 
+        name="PvPBattle" 
+        component={PvPBattleScreen}
         options={{ 
           headerTitle: 'Battle', 
           headerLeft: () => null,
@@ -59,13 +67,23 @@ function BattleStack() {
         }}
       />
       <Stack.Screen 
-        name="BattleResult" 
-        component={BattleResultScreen}
+        name="PvPResult" 
+        component={PvPResultScreen}
         options={{ 
           headerTitle: 'Battle Result', 
           headerLeft: () => null,
           gestureEnabled: false,
         }}
+      />
+      <Stack.Screen 
+        name="BotArena" 
+        component={BotArenaScreen}
+        options={{ headerTitle: 'Bot Arena' }}
+      />
+      <Stack.Screen 
+        name="RunnerGame" 
+        component={RunnerGameScreen}
+        options={{ headerTitle: 'Pet Runner' }}
       />
     </Stack.Navigator>
   );
@@ -110,8 +128,8 @@ function MainTabs() {
         name="Battle" 
         component={BattleStack}
         options={({ route }) => {
-          const routeName = getFocusedRouteNameFromRoute(route) ?? 'BattleMatchmaking';
-          const hideTabBar = routeName === 'Battle' || routeName === 'BattleResult';
+          const routeName = getFocusedRouteNameFromRoute(route) ?? 'BattleModeSelector';
+          const hideTabBar = routeName === 'PvPBattle' || routeName === 'PvPResult';
           return {
             headerShown: false,
             tabBarStyle: hideTabBar ? { display: 'none' } : undefined,
