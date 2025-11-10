@@ -8,6 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthProvider, AuthContext } from './src/context/AuthContext';
 import { PetProvider, PetContext } from './src/context/PetContext';
 import { HealthProvider } from './src/context/HealthContext';
+import { BattleProvider } from './src/context/BattleContext';
 
 import LoginScreen from './src/screens/LoginScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
@@ -16,6 +17,9 @@ import HomeScreen from './src/screens/HomeScreen';
 import TrackScreen from './src/screens/TrackScreen';
 import PetScreen from './src/screens/PetScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import BattleMatchmakingScreen from './src/screens/BattleMatchmakingScreen';
+import BattleScreen from './src/screens/BattleScreen';
+import BattleResultScreen from './src/screens/BattleResultScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -37,6 +41,36 @@ function AuthStack() {
   );
 }
 
+function BattleStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="BattleMatchmaking" 
+        component={BattleMatchmakingScreen}
+        options={{ headerTitle: 'Battle Arena' }}
+      />
+      <Stack.Screen 
+        name="Battle" 
+        component={BattleScreen}
+        options={{ 
+          headerTitle: 'Battle', 
+          headerLeft: () => null,
+          gestureEnabled: false,
+        }}
+      />
+      <Stack.Screen 
+        name="BattleResult" 
+        component={BattleResultScreen}
+        options={{ 
+          headerTitle: 'Battle Result', 
+          headerLeft: () => null,
+          gestureEnabled: false,
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 function MainTabs() {
   return (
     <Tab.Navigator
@@ -48,6 +82,8 @@ function MainTabs() {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Track') {
             iconName = focused ? 'clipboard-check' : 'clipboard-check-outline';
+          } else if (route.name === 'Battle') {
+            iconName = focused ? 'sword-cross' : 'sword';
           } else if (route.name === 'Pet') {
             iconName = focused ? 'paw' : 'paw-outline';
           } else if (route.name === 'Profile') {
@@ -56,7 +92,7 @@ function MainTabs() {
 
           return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#6200ee',
+        tabBarActiveTintColor: '#32808D',
         tabBarInactiveTintColor: 'gray',
       })}
     >
@@ -69,6 +105,11 @@ function MainTabs() {
         name="Track" 
         component={TrackScreen}
         options={{ headerTitle: 'Track Health' }}
+      />
+      <Tab.Screen 
+        name="Battle" 
+        component={BattleStack}
+        options={{ headerShown: false }}
       />
       <Tab.Screen 
         name="Pet" 
@@ -112,9 +153,11 @@ export default function App() {
     <PaperProvider>
       <AuthProvider>
         <PetProvider>
-          <HealthProvider>
-            <Navigation />
-          </HealthProvider>
+          <BattleProvider>
+            <HealthProvider>
+              <Navigation />
+            </HealthProvider>
+          </BattleProvider>
         </PetProvider>
       </AuthProvider>
     </PaperProvider>

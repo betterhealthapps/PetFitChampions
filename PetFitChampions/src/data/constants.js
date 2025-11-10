@@ -51,3 +51,31 @@ export const ACTIVITY_TYPES = {
   MEALS: 'meals',
   BREATHING: 'breathing',
 };
+
+// Battle system constants
+export const BATTLE_CONSTANTS = {
+  ENERGY_COST: 20,
+  MAX_ENERGY: 100,
+  ENERGY_REGEN_RATE: 1, // Energy per minute
+  VICTORY_GEM_REWARD: 15,
+  DEFEAT_GEM_LOSS: 5,
+};
+
+// Battle actions
+export const BATTLE_ACTIONS = {
+  ATTACK: 'attack',
+  DEFEND: 'defend',
+  SPECIAL: 'special',
+};
+
+// Color scheme
+export const COLORS = {
+  PRIMARY: '#32808D',
+  SECONDARY: '#F5F5F5',
+  ACCENT: '#5EB8C6',
+  SUCCESS: '#43a047',
+  ERROR: '#d32f2f',
+  WARNING: '#ff9800',
+  TEXT_PRIMARY: '#212121',
+  TEXT_SECONDARY: '#666',
+};

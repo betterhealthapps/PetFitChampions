@@ -5,6 +5,8 @@ const KEYS = {
   PET: '@petfit_pet',
   HEALTH_LOGS: '@petfit_health_logs',
   GEMS: '@petfit_gems',
+  ENERGY: '@petfit_energy',
+  LAST_ENERGY_UPDATE: '@petfit_last_energy_update',
 };
 
 // User storage
@@ -88,6 +90,43 @@ export const getGems = async () => {
   } catch (error) {
     console.error('Error getting gems:', error);
     return 0;
+  }
+};
+
+// Energy storage
+export const saveEnergy = async (energy) => {
+  try {
+    await AsyncStorage.setItem(KEYS.ENERGY, JSON.stringify(energy));
+  } catch (error) {
+    console.error('Error saving energy:', error);
+  }
+};
+
+export const getEnergy = async () => {
+  try {
+    const energy = await AsyncStorage.getItem(KEYS.ENERGY);
+    return energy ? JSON.parse(energy) : 100;
+  } catch (error) {
+    console.error('Error getting energy:', error);
+    return 100;
+  }
+};
+
+export const saveLastEnergyUpdate = async (timestamp) => {
+  try {
+    await AsyncStorage.setItem(KEYS.LAST_ENERGY_UPDATE, JSON.stringify(timestamp));
+  } catch (error) {
+    console.error('Error saving last energy update:', error);
+  }
+};
+
+export const getLastEnergyUpdate = async () => {
+  try {
+    const timestamp = await AsyncStorage.getItem(KEYS.LAST_ENERGY_UPDATE);
+    return timestamp ? JSON.parse(timestamp) : null;
+  } catch (error) {
+    console.error('Error getting last energy update:', error);
+    return null;
   }
 };
 

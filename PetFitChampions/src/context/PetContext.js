@@ -143,6 +143,13 @@ export const PetProvider = ({ children }) => {
     return evolvedPet;
   };
 
+  const addGems = async (amount) => {
+    const newGems = gems + amount;
+    setGems(newGems);
+    await saveGems(newGems);
+    return newGems;
+  };
+
   const value = {
     pet,
     gems,
@@ -151,6 +158,8 @@ export const PetProvider = ({ children }) => {
     addXP,
     getLevelProgress,
     spendGems,
+    addGems,
+    setGems,
     evolvePet,
   };
 
