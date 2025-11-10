@@ -14,7 +14,7 @@ import {
   calculateBotRewards,
   initializeBattleTraits,
 } from '../utils/battleLogic';
-import { saveUserData, getUserData } from '../utils/storage';
+import { saveBattleStats, getBattleStats } from '../utils/storage';
 
 export default function BotArenaScreen({ navigation }) {
   const { energy, consumeEnergy, hasEnoughEnergy, maxEnergy } = useContext(BattleContext);
@@ -44,9 +44,9 @@ export default function BotArenaScreen({ navigation }) {
   }, []);
 
   const loadBotStats = async () => {
-    const userData = await getUserData();
-    if (userData && userData.botBattles) {
-      setBotStats(userData.botBattles);
+    const battleStats = await getBattleStats();
+    if (battleStats && battleStats.bot) {
+      setBotStats(battleStats.bot);
     }
   };
 
@@ -186,23 +186,20 @@ export default function BotArenaScreen({ navigation }) {
       
       const levelUpResult = await addXP(rewards.xp);
 
-      const userData = await getUserData();
-      const currentBotStats = userData.botBattles || { easy: { wins: 0, losses: 0 }, medium: { wins: 0, losses: 0 }, hard: { wins: 0, losses: 0 } };
+      const battleStats = await getBattleStats();
       const statKey = result === 'victory' ? 'wins' : 'losses';
-      currentBotStats[selectedDifficulty][statKey] += 1;
+      battleStats.bot[selectedDifficulty][statKey] += 1;
       
-      await saveUserData({ botBattles: currentBotStats });
-      setBotStats(currentBotStats);
+      await saveBattleStats(battleStats);
+      setBotStats(battleStats.bot);
 
-      const message = result === 'victory'
-        ? `🎉 VICTORY! 🎉\n\nYou defeated ${botPet.name}!\n\n💎 Gems: +${rewards.gems}\n⭐ XP: +${rewards.xp}`
-        : `💔 Defeat\n\n${botPet.name} won the battle.\n\n💎 Gems: ${rewards.gems}\n⭐ XP: +${rewards.xp}`;
-
-      Alert.alert(
-        result === 'victory' ? 'Victory!' : 'Defeat',
-        message,
-        [{ text: 'Continue', onPress: () => resetBattle() }]
-      );
+      navigation.navigate('BotArenaResult', {
+        result,
+        rewards,
+        botName: botPet.name,
+        difficulty: selectedDifficulty,
+        botStats: battleStats.bot,
+      });
     } catch (error) {
       console.error('Error ending battle:', error);
       Alert.alert('Error', 'Failed to save battle results');

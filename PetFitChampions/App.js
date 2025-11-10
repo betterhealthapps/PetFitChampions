@@ -25,6 +25,7 @@ import PvPArenaScreen from './src/screens/PvPArenaScreen';
 import PvPBattleScreen from './src/screens/PvPBattleScreen';
 import PvPResultScreen from './src/screens/PvPResultScreen';
 import BotArenaScreen from './src/screens/BotArenaScreen';
+import BotArenaResultScreen from './src/screens/BotArenaResultScreen';
 import RunnerGameScreen from './src/screens/RunnerGameScreen';
 
 const Stack = createStackNavigator();
@@ -82,6 +83,15 @@ function BattleStack() {
         name="BotArena" 
         component={BotArenaScreen}
         options={{ headerTitle: 'Bot Arena' }}
+      />
+      <Stack.Screen 
+        name="BotArenaResult" 
+        component={BotArenaResultScreen}
+        options={{ 
+          headerTitle: 'Battle Result', 
+          headerLeft: () => null,
+          gestureEnabled: false,
+        }}
       />
       <Stack.Screen 
         name="RunnerGame" 

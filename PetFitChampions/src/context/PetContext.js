@@ -19,6 +19,10 @@ export const PetProvider = ({ children }) => {
     const petData = await getPet();
     const gemsData = await getGems();
     
+    if (petData && petData.tier) {
+      petData.tier = Number(petData.tier);
+    }
+    
     // Don't create default pet - let user select from PetSelectionScreen
     setPet(petData);
     setGems(gemsData);

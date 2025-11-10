@@ -6,7 +6,7 @@ import { BattleContext } from '../context/BattleContext';
 import { PetContext } from '../context/PetContext';
 import { COLORS } from '../data/constants';
 import { calculateRunnerReward } from '../utils/battleLogic';
-import { saveUserData, getUserData } from '../utils/storage';
+import { saveBattleStats, getBattleStats } from '../utils/storage';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GROUND_HEIGHT = 120;
@@ -47,9 +47,13 @@ export default function RunnerGameScreen({ navigation }) {
   }, [gameState]);
 
   const loadRunnerStats = async () => {
-    const userData = await getUserData();
-    if (userData && userData.runnerStats) {
-      setRunnerStats(userData.runnerStats);
+    const battleStats = await getBattleStats();
+    if (battleStats && battleStats.runner) {
+      const stats = battleStats.runner;
+      if (stats.dailyGems !== undefined && stats.todayGems === undefined) {
+        stats.todayGems = stats.dailyGems;
+      }
+      setRunnerStats(stats);
     }
   };
 
@@ -153,8 +157,10 @@ export default function RunnerGameScreen({ navigation }) {
     setGameState('gameOver');
 
     try {
-      const userData = await getUserData();
-      const currentStats = userData.runnerStats || { highScore: 0, totalRuns: 0, todayGems: 0 };
+      const battleStats = await getBattleStats();
+      const currentStats = battleStats.runner || { highScore: 0, totalRuns: 0, todayGems: 0 };
+      
+      currentStats.todayGems = currentStats.todayGems ?? currentStats.dailyGems ?? 0;
       
       const DAILY_GEM_LIMIT = 50;
       const isAtDailyLimit = currentStats.todayGems >= DAILY_GEM_LIMIT;
@@ -174,11 +180,12 @@ export default function RunnerGameScreen({ navigation }) {
 
       const newStats = {
         highScore: Math.max(currentStats.highScore, score),
-        totalRuns: currentStats.totalRuns + 1,
+        totalRuns: (currentStats.totalRuns || 0) + 1,
         todayGems: currentStats.todayGems + gemsEarned,
       };
 
-      await saveUserData({ runnerStats: newStats });
+      battleStats.runner = newStats;
+      await saveBattleStats(battleStats);
       setRunnerStats(newStats);
 
       const isNewRecord = score > currentStats.highScore;

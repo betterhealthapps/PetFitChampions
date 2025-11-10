@@ -157,7 +157,7 @@ export const getBattleStats = async () => {
         medium: { wins: 0, losses: 0 }, 
         hard: { wins: 0, losses: 0 } 
       },
-      runner: { highScore: 0, dailyGems: 0 }
+      runner: { highScore: 0, todayGems: 0, totalRuns: 0 }
     };
   } catch (error) {
     console.error('Error getting battle stats:', error);
@@ -168,7 +168,7 @@ export const getBattleStats = async () => {
         medium: { wins: 0, losses: 0 }, 
         hard: { wins: 0, losses: 0 } 
       },
-      runner: { highScore: 0, dailyGems: 0 }
+      runner: { highScore: 0, todayGems: 0, totalRuns: 0 }
     };
   }
 };
@@ -370,5 +370,26 @@ export const getProfileData = async () => {
         facebook: '',
       },
     };
+  }
+};
+
+// User data helper (for battle stats, runner stats, etc.)
+export const saveUserData = async (data) => {
+  try {
+    const existing = await getUserData();
+    const updated = { ...existing, ...data };
+    await AsyncStorage.setItem('@petfit_user_data', JSON.stringify(updated));
+  } catch (error) {
+    console.error('Error saving user data:', error);
+  }
+};
+
+export const getUserData = async () => {
+  try {
+    const data = await AsyncStorage.getItem('@petfit_user_data');
+    return data ? JSON.parse(data) : {};
+  } catch (error) {
+    console.error('Error getting user data:', error);
+    return {};
   }
 };

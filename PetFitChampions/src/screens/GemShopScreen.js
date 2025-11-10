@@ -198,6 +198,20 @@ export default function GemShopScreen({ navigation }) {
                       <Text style={[styles.rarityBadge, { color: RARITY_COLORS[item.rarity] }]}>
                         {item.rarity.toUpperCase()}
                       </Text>
+                      {item.description && (
+                        <Text style={styles.itemDescription}>{item.description}</Text>
+                      )}
+                      {item.statBoosts && (
+                        <View style={styles.statBoostsContainer}>
+                          {Object.entries(item.statBoosts).map(([stat, value]) => (
+                            <View key={stat} style={styles.statBoostPill}>
+                              <Text style={styles.statBoostText}>
+                                +{value} {stat.charAt(0).toUpperCase() + stat.slice(1)}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
                     </View>
                     <View style={styles.itemActions}>
                       <Text style={styles.itemCost}>{item.cost} 💎</Text>
@@ -527,6 +541,31 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     marginTop: 4,
+  },
+  itemDescription: {
+    fontSize: 11,
+    color: '#666',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  statBoostsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 6,
+  },
+  statBoostPill: {
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginRight: 4,
+    marginBottom: 4,
+  },
+  statBoostText: {
+    fontSize: 10,
+    color: '#1976d2',
+    fontWeight: '600',
   },
   itemActions: {
     alignItems: 'flex-end',

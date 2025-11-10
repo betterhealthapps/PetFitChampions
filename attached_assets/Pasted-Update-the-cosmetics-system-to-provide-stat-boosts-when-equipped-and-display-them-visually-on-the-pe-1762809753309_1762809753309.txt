@@ -1,0 +1,891 @@
+Update the cosmetics system to provide stat boosts when equipped and display them visually on the pet.
+
+REQUIREMENTS:
+
+1. UPDATE COSMETICS DATA WITH STAT BOOSTS:
+
+FILE: /config/cosmeticsData.js
+
+export const COSMETICS = {
+hats: [
+{
+id: 'hat_party',
+name: 'Party Hat',
+cost: 50,
+icon: '🎩',
+rarity: 'common',
+statBoosts: {
+energy: 2,
+},
+description: '+2 Energy - Perfect for celebrations!',
+position: { top: -30, left: 5 }, // Visual positioning
+},
+{
+id: 'hat_crown',
+name: 'Royal Crown',
+cost: 150,
+icon: '👑',
+rarity: 'rare',
+statBoosts: {
+defense: 3,
+health: 2,
+},
+description: '+3 Defense, +2 Health - Fit for royalty!',
+position: { top: -35, left: 0 },
+},
+{
+id: 'hat_wizard',
+name: 'Wizard Hat',
+cost: 100,
+icon: '🧙',
+rarity: 'uncommon',
+statBoosts: {
+energy: 3,
+agility: 1,
+},
+description: '+3 Energy, +1 Agility - Magical powers!',
+position: { top: -40, left: -5 },
+},
+{
+id: 'hat_halo',
+name: 'Halo',
+cost: 200,
+icon: '😇',
+rarity: 'epic',
+statBoosts: {
+health: 5,
+defense: 2,
+},
+description: '+5 Health, +2 Defense - Divine protection!',
+position: { top: -45, left: 0 },
+},
+{
+id: 'hat_ninja',
+name: 'Ninja Headband',
+cost: 120,
+icon: '🥷',
+rarity: 'rare',
+statBoosts: {
+agility: 4,
+attack: 2,
+},
+description: '+4 Agility, +2 Attack - Silent but deadly!',
+position: { top: -25, left: 0 },
+},
+],
+
+accessories: [
+{
+id: 'acc_bow',
+name: 'Bow Tie',
+cost: 75,
+icon: '🎀',
+rarity: 'common',
+statBoosts: {
+stamina: 2,
+},
+description: '+2 Stamina - Classy and comfortable!',
+position: { top: 40, left: 10 },
+},
+{
+id: 'acc_glasses',
+name: 'Cool Glasses',
+cost: 80,
+icon: '😎',
+rarity: 'common',
+statBoosts: {
+agility: 2,
+attack: 1,
+},
+description: '+2 Agility, +1 Attack - Look sharp, move fast!',
+position: { top: 15, left: 8 },
+},
+{
+id: 'acc_scarf',
+name: 'Winter Scarf',
+cost: 90,
+icon: '🧣',
+rarity: 'uncommon',
+statBoosts: {
+defense: 3,
+stamina: 2,
+},
+description: '+3 Defense, +2 Stamina - Warm and cozy!',
+position: { top: 35, left: 5 },
+},
+{
+id: 'acc_medal',
+name: 'Gold Medal',
+cost: 175,
+icon: '🥇',
+rarity: 'rare',
+statBoosts: {
+strength: 3,
+attack: 3,
+},
+description: '+3 Strength, +3 Attack - Champion power!',
+position: { top: 45, left: 15 },
+},
+{
+id: 'acc_necklace',
+name: 'Power Necklace',
+cost: 130,
+icon: '📿',
+rarity: 'uncommon',
+statBoosts: {
+energy: 3,
+health: 2,
+},
+description: '+3 Energy, +2 Health - Mystical energy!',
+position: { top: 42, left: 12 },
+},
+],
+
+skins: [
+{
+id: 'skin_glow',
+name: 'Glowing Aura',
+cost: 150,
+icon: '✨',
+rarity: 'rare',
+statBoosts: {
+energy: 4,
+agility: 2,
+},
+description: '+4 Energy, +2 Agility - Radiant power!',
+isFullBody: true,
+},
+{
+id: 'skin_rainbow',
+name: 'Rainbow Fur',
+cost: 200,
+icon: '🌈',
+rarity: 'epic',
+statBoosts: {
+health: 3,
+strength: 3,
+agility: 2,
+},
+description: '+3 Health, +3 Strength, +2 Agility - All colors of power!',
+isFullBody: true,
+},
+{
+id: 'skin_galaxy',
+name: 'Galaxy Pattern',
+cost: 180,
+icon: '🌌',
+rarity: 'epic',
+statBoosts: {
+energy: 5,
+defense: 3,
+},
+description: '+5 Energy, +3 Defense - Cosmic protection!',
+isFullBody: true,
+},
+{
+id: 'skin_fire',
+name: 'Flame Aura',
+cost: 190,
+icon: '🔥',
+rarity: 'epic',
+statBoosts: {
+attack: 5,
+strength: 3,
+},
+description: '+5 Attack, +3 Strength - Burn bright!',
+isFullBody: true,
+},
+{
+id: 'skin_ice',
+name: 'Frost Armor',
+cost: 185,
+icon: '❄️',
+rarity: 'epic',
+statBoosts: {
+defense: 5,
+health: 3,
+},
+description: '+5 Defense, +3 Health - Cold as ice!',
+isFullBody: true,
+},
+],
+};
+
+export const getRarityColor = (rarity) => {
+const colors = {
+common: '#9E9E9E',
+uncommon: '#4CAF50',
+rare: '#2196F3',
+epic: '#9C27B0',
+legendary: '#FF9800',
+};
+return colors[rarity] || colors.common;
+};
+
+export const getTotalStatBoosts = (equippedCosmetics) => {
+const totalBoosts = {
+health: 0,
+energy: 0,
+strength: 0,
+defense: 0,
+stamina: 0,
+agility: 0,
+attack: 0,
+};
+
+Object.values(COSMETICS).flat().forEach(cosmetic => {
+if (equippedCosmetics.includes(cosmetic.id) && cosmetic.statBoosts) {
+Object.keys(cosmetic.statBoosts).forEach(stat => {
+totalBoosts[stat] += cosmetic.statBoosts[stat];
+});
+}
+});
+
+return totalBoosts;
+};
+
+
+2. UPDATE PET SCREEN TO DISPLAY COSMETICS:
+
+FILE: /screens/PetScreen.js (UPDATE)
+
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
+import { COSMETICS, getTotalStatBoosts, getRarityColor } from '../config/cosmeticsData';
+
+export default function PetScreen({ navigation }) {
+const [petData, setPetData] = useState(null);
+const [equippedCosmetics, setEquippedCosmetics] = useState({
+hat: null,
+accessory: null,
+skin: null,
+});
+const [totalStats, setTotalStats] = useState(null);
+const [cosmeticBoosts, setCosmeticBoosts] = useState(null);
+
+useEffect(() => {
+loadPetData();
+}, []);
+
+const loadPetData = async () => {
+try {
+const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+const data = userDoc.data();
+const pet = data.pets;
+  setPetData(pet);
+  setEquippedCosmetics(pet.cosmetics || {
+    hat: null,
+    accessory: null,
+    skin: null,
+  });
+
+  // Calculate total stats including cosmetic boosts
+  const equippedIds = Object.values(pet.cosmetics || {}).filter(Boolean);
+  const boosts = getTotalStatBoosts(equippedIds);
+  setCosmeticBoosts(boosts);
+
+  // Calculate final stats
+  const finalStats = { ...pet.baseStats };
+  Object.keys(boosts).forEach(stat => {
+    finalStats[stat] = Math.min(100, (finalStats[stat] || 0) + boosts[stat]);
+  });
+  setTotalStats(finalStats);
+} catch (error) {
+  console.error('Error loading pet data:', error);
+}
+};
+
+const getEquippedItem = (slot) => {
+const itemId = equippedCosmetics[slot];
+if (!itemId) return null;
+return Object.values(COSMETICS)
+  .flat()
+  .find(item => item.id === itemId);
+};
+
+if (!petData || !totalStats) {
+return <View style={styles.loading}><Text>Loading...</Text></View>;
+}
+
+const hatItem = getEquippedItem('hat');
+const accessoryItem = getEquippedItem('accessory');
+const skinItem = getEquippedItem('skin');
+
+return (
+<ScrollView style={styles.container}>
+{/* Pet Display with Cosmetics */}
+<View style={styles.petDisplay}>
+<Text style={styles.petName}>{petData.name}</Text>
+<Text style={styles.petLevel}>Level {petData.level}</Text>
+    {/* Pet Visualization */}
+    <View style={styles.petContainer}>
+      {/* Skin (background layer) */}
+      {skinItem && (
+        <View style={styles.skinLayer}>
+          <Text style={styles.skinIcon}>{skinItem.icon}</Text>
+        </View>
+      )}
+
+      {/* Pet Body */}
+      <View style={styles.petBody}>
+        <Text style={styles.petIcon}>🐾</Text>
+      </View>
+
+      {/* Hat (top layer) */}
+      {hatItem && (
+        <View 
+          style={[
+            styles.cosmeticOverlay,
+            { 
+              top: hatItem.position.top, 
+              left: hatItem.position.left 
+            }
+          ]}
+        >
+          <Text style={styles.cosmeticIcon}>{hatItem.icon}</Text>
+        </View>
+      )}
+
+      {/* Accessory (middle layer) */}
+      {accessoryItem && (
+        <View 
+          style={[
+            styles.cosmeticOverlay,
+            { 
+              top: accessoryItem.position.top, 
+              left: accessoryItem.position.left 
+            }
+          ]}
+        >
+          <Text style={styles.cosmeticIcon}>{accessoryItem.icon}</Text>
+        </View>
+      )}
+    </View>
+
+    {/* Equipped Cosmetics Info */}
+    <View style={styles.equippedInfo}>
+      <Text style={styles.equippedTitle}>Equipped Cosmetics</Text>
+      {hatItem && (
+        <View style={styles.equippedItem}>
+          <Text style={styles.equippedIcon}>{hatItem.icon}</Text>
+          <Text style={styles.equippedName}>{hatItem.name}</Text>
+          <View style={[styles.rarityBadge, { backgroundColor: getRarityColor(hatItem.rarity) }]}>
+            <Text style={styles.rarityText}>{hatItem.rarity}</Text>
+          </View>
+        </View>
+      )}
+      {accessoryItem && (
+        <View style={styles.equippedItem}>
+          <Text style={styles.equippedIcon}>{accessoryItem.icon}</Text>
+          <Text style={styles.equippedName}>{accessoryItem.name}</Text>
+          <View style={[styles.rarityBadge, { backgroundColor: getRarityColor(accessoryItem.rarity) }]}>
+            <Text style={styles.rarityText}>{accessoryItem.rarity}</Text>
+          </View>
+        </View>
+      )}
+      {skinItem && (
+        <View style={styles.equippedItem}>
+          <Text style={styles.equippedIcon}>{skinItem.icon}</Text>
+          <Text style={styles.equippedName}>{skinItem.name}</Text>
+          <View style={[styles.rarityBadge, { backgroundColor: getRarityColor(skinItem.rarity) }]}>
+            <Text style={styles.rarityText}>{skinItem.rarity}</Text>
+          </View>
+        </View>
+      )}
+      {!hatItem && !accessoryItem && !skinItem && (
+        <Text style={styles.noCosmetics}>No cosmetics equipped</Text>
+      )}
+    </View>
+  </View>
+
+  {/* Stats with Boosts */}
+  <View style={styles.statsCard}>
+    <Text style={styles.statsTitle}>Stats</Text>
+    
+    {Object.entries(totalStats).map(([stat, value]) => {
+      const boost = cosmeticBoosts[stat] || 0;
+      const baseValue = petData.baseStats[stat] || 0;
+
+      return (
+        <View key={stat} style={styles.statRow}>
+          <Text style={styles.statLabel}>
+            {stat.charAt(0).toUpperCase() + stat.slice(1)}
+          </Text>
+          <View style={styles.statValues}>
+            {boost > 0 && (
+              <Text style={styles.statBoost}>+{boost}</Text>
+            )}
+            <View style={styles.statBarContainer}>
+              {/* Base stat bar */}
+              <View 
+                style={[
+                  styles.statBar,
+                  { width: `${baseValue}%` }
+                ]} 
+              />
+              {/* Boost bar overlay */}
+              {boost > 0 && (
+                <View 
+                  style={[
+                    styles.statBarBoost,
+                    { width: `${value}%` }
+                  ]} 
+                />
+              )}
+            </View>
+            <Text style={styles.statValue}>
+              {boost > 0 ? (
+                <Text>
+                  <Text style={styles.baseStatText}>{baseValue}</Text>
+                  <Text style={styles.boostStatText}> → {value}</Text>
+                </Text>
+              ) : (
+                value
+              )}
+            </Text>
+          </View>
+        </View>
+      );
+    })}
+  </View>
+
+  {/* Cosmetic Bonuses Summary */}
+  {Object.values(cosmeticBoosts).some(v => v > 0) && (
+    <View style={styles.bonusCard}>
+      <Text style={styles.bonusTitle}>✨ Cosmetic Bonuses</Text>
+      <View style={styles.bonusGrid}>
+        {Object.entries(cosmeticBoosts)
+          .filter(([stat, value]) => value > 0)
+          .map(([stat, value]) => (
+            <View key={stat} style={styles.bonusItem}>
+              <Text style={styles.bonusStatName}>
+                {stat.charAt(0).toUpperCase() + stat.slice(1)}
+              </Text>
+              <Text style={styles.bonusStatValue}>+{value}</Text>
+            </View>
+          ))}
+      </View>
+      <Text style={styles.bonusTip}>
+        💡 Tip: Equip more cosmetics for bigger stat boosts!
+      </Text>
+    </View>
+  )}
+
+  {/* Shop Button */}
+  <TouchableOpacity
+    style={styles.shopBtn}
+    onPress={() => navigation.navigate('GemShop')}
+  >
+    <Text style={styles.shopBtnText}>🛒 Visit Gem Shop</Text>
+  </TouchableOpacity>
+
+  <View style={{ height: 40 }} />
+</ScrollView>
+);
+}
+
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: '#F5F5F5',
+},
+loading: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+},
+petDisplay: {
+backgroundColor: 'white',
+padding: 20,
+alignItems: 'center',
+},
+petName: {
+fontSize: 28,
+fontWeight: 'bold',
+color: '#333',
+marginBottom: 5,
+},
+petLevel: {
+fontSize: 16,
+color: '#666',
+marginBottom: 20,
+},
+petContainer: {
+width: 200,
+height: 200,
+position: 'relative',
+justifyContent: 'center',
+alignItems: 'center',
+marginBottom: 20,
+},
+skinLayer: {
+position: 'absolute',
+width: '100%',
+height: '100%',
+justifyContent: 'center',
+alignItems: 'center',
+opacity: 0.3,
+},
+skinIcon: {
+fontSize: 120,
+},
+petBody: {
+width: 120,
+height: 120,
+borderRadius: 60,
+backgroundColor: '#F0F0F0',
+justifyContent: 'center',
+alignItems: 'center',
+},
+petIcon: {
+fontSize: 80,
+},
+cosmeticOverlay: {
+position: 'absolute',
+},
+cosmeticIcon: {
+fontSize: 50,
+},
+equippedInfo: {
+width: '100%',
+marginTop: 10,
+},
+equippedTitle: {
+fontSize: 16,
+fontWeight: 'bold',
+marginBottom: 10,
+color: '#333',
+},
+equippedItem: {
+flexDirection: 'row',
+alignItems: 'center',
+backgroundColor: '#F5F5F5',
+padding: 10,
+borderRadius: 8,
+marginBottom: 8,
+},
+equippedIcon: {
+fontSize: 24,
+marginRight: 10,
+},
+equippedName: {
+flex: 1,
+fontSize: 14,
+color: '#333',
+},
+rarityBadge: {
+paddingHorizontal: 8,
+paddingVertical: 4,
+borderRadius: 4,
+},
+rarityText: {
+fontSize: 10,
+color: 'white',
+fontWeight: 'bold',
+textTransform: 'uppercase',
+},
+noCosmetics: {
+fontSize: 14,
+color: '#999',
+fontStyle: 'italic',
+},
+statsCard: {
+backgroundColor: 'white',
+margin: 20,
+padding: 20,
+borderRadius: 12,
+},
+statsTitle: {
+fontSize: 20,
+fontWeight: 'bold',
+marginBottom: 15,
+color: '#333',
+},
+statRow: {
+marginBottom: 15,
+},
+statLabel: {
+fontSize: 14,
+fontWeight: '600',
+color: '#666',
+marginBottom: 5,
+},
+statValues: {
+flexDirection: 'row',
+alignItems: 'center',
+},
+statBoost: {
+fontSize: 12,
+color: '#4CAF50',
+fontWeight: 'bold',
+marginRight: 8,
+},
+statBarContainer: {
+flex: 1,
+height: 20,
+backgroundColor: '#E0E0E0',
+borderRadius: 10,
+overflow: 'hidden',
+position: 'relative',
+marginRight: 10,
+},
+statBar: {
+position: 'absolute',
+left: 0,
+top: 0,
+height: '100%',
+backgroundColor: '#32808D',
+},
+statBarBoost: {
+position: 'absolute',
+left: 0,
+top: 0,
+height: '100%',
+backgroundColor: '#4CAF50',
+opacity: 0.7,
+},
+statValue: {
+fontSize: 14,
+fontWeight: 'bold',
+color: '#333',
+minWidth: 60,
+textAlign: 'right',
+},
+baseStatText: {
+color: '#666',
+},
+boostStatText: {
+color: '#4CAF50',
+},
+bonusCard: {
+backgroundColor: '#E8F5E9',
+marginHorizontal: 20,
+marginBottom: 20,
+padding: 15,
+borderRadius: 12,
+borderWidth: 2,
+borderColor: '#4CAF50',
+},
+bonusTitle: {
+fontSize: 18,
+fontWeight: 'bold',
+color: '#2E7D32',
+marginBottom: 12,
+},
+bonusGrid: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+gap: 10,
+marginBottom: 12,
+},
+bonusItem: {
+backgroundColor: 'white',
+paddingHorizontal: 12,
+paddingVertical: 8,
+borderRadius: 8,
+minWidth: 80,
+alignItems: 'center',
+},
+bonusStatName: {
+fontSize: 11,
+color: '#666',
+marginBottom: 2,
+},
+bonusStatValue: {
+fontSize: 16,
+fontWeight: 'bold',
+color: '#4CAF50',
+},
+bonusTip: {
+fontSize: 12,
+color: '#666',
+fontStyle: 'italic',
+textAlign: 'center',
+},
+shopBtn: {
+backgroundColor: '#32808D',
+marginHorizontal: 20,
+marginBottom: 20,
+padding: 18,
+borderRadius: 12,
+alignItems: 'center',
+},
+shopBtnText: {
+color: 'white',
+fontSize: 16,
+fontWeight: 'bold',
+},
+});
+
+3. UPDATE GEM SHOP TO SHOW STAT BOOSTS:
+
+Update the cosmetics section in GemShopScreen.js:
+
+// In GemShopScreen.js, update the cosmetics display
+
+const renderCosmetics = () => {
+return (
+<ScrollView>
+<Text style={styles.categoryTitle}>Hats</Text>
+{COSMETICS.hats.map(item => renderCosmeticItem(item, 'hat'))}
+  <Text style={styles.categoryTitle}>Accessories</Text>
+  {COSMETICS.accessories.map(item => renderCosmeticItem(item, 'accessory'))}
+  
+  <Text style={styles.categoryTitle}>Skins</Text>
+  {COSMETICS.skins.map(item => renderCosmeticItem(item, 'skin'))}
+</ScrollView>
+);
+};
+
+const renderCosmeticItem = (item, slot) => {
+const isOwned = ownedItems.includes(item.id);
+const isEquipped = equippedItems[slot] === item.id;
+
+return (
+<View key={item.id} style={styles.cosmeticCard}>
+{/* Icon */}
+<Text style={styles.cosmeticIcon}>{item.icon}</Text>
+  {/* Info */}
+  <View style={styles.cosmeticInfo}>
+    <Text style={styles.cosmeticName}>{item.name}</Text>
+    <View style={[styles.rarityBadge, { backgroundColor: getRarityColor(item.rarity) }]}>
+      <Text style={styles.rarityText}>{item.rarity}</Text>
+    </View>
+    
+    {/* Description */}
+    <Text style={styles.cosmeticDesc}>{item.description}</Text>
+
+    {/* Stat Boosts */}
+    {item.statBoosts && (
+      <View style={styles.statBoostsContainer}>
+        {Object.entries(item.statBoosts).map(([stat, value]) => (
+          <View key={stat} style={styles.statBoostChip}>
+            <Text style={styles.statBoostText}>
+              +{value} {stat.charAt(0).toUpperCase() + stat.slice(1)}
+            </Text>
+          </View>
+        ))}
+      </View>
+    )}
+  </View>
+
+  {/* Actions */}
+  <View style={styles.cosmeticActions}>
+    {isOwned ? (
+      <TouchableOpacity
+        style={[styles.equipBtn, isEquipped && styles.equippedBtn]}
+        onPress={() => handleEquip(item, slot)}
+      >
+        <Text style={styles.equipBtnText}>
+          {isEquipped ? '✓ Equipped' : 'Equip'}
+        </Text>
+      </TouchableOpacity>
+    ) : (
+      <>
+        <Text style={styles.priceText}>{item.cost} 💎</Text>
+        <TouchableOpacity
+          style={styles.buyBtn}
+          onPress={() => handlePurchase(item, slot)}
+        >
+          <Text style={styles.buyBtnText}>Buy</Text>
+        </TouchableOpacity>
+      </>
+    )}
+  </View>
+</View>
+);
+};
+
+// Add these styles
+const newStyles = {
+categoryTitle: {
+fontSize: 18,
+fontWeight: 'bold',
+color: '#333',
+marginTop: 20,
+marginBottom: 10,
+paddingHorizontal: 20,
+},
+cosmeticCard: {
+flexDirection: 'row',
+backgroundColor: 'white',
+marginHorizontal: 20,
+marginBottom: 12,
+padding: 15,
+borderRadius: 12,
+alignItems: 'center',
+},
+cosmeticIcon: {
+fontSize: 40,
+marginRight: 15,
+},
+cosmeticInfo: {
+flex: 1,
+},
+cosmeticName: {
+fontSize: 16,
+fontWeight: 'bold',
+color: '#333',
+marginBottom: 4,
+},
+cosmeticDesc: {
+fontSize: 12,
+color: '#666',
+marginTop: 4,
+},
+statBoostsContainer: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+gap: 6,
+marginTop: 8,
+},
+statBoostChip: {
+backgroundColor: '#E8F5E9',
+paddingHorizontal: 8,
+paddingVertical: 4,
+borderRadius: 4,
+borderWidth: 1,
+borderColor: '#4CAF50',
+},
+statBoostText: {
+fontSize: 10,
+color: '#2E7D32',
+fontWeight: 'bold',
+},
+cosmeticActions: {
+alignItems: 'flex-end',
+},
+equipBtn: {
+backgroundColor: '#32808D',
+paddingHorizontal: 15,
+paddingVertical: 8,
+borderRadius: 8,
+},
+equippedBtn: {
+backgroundColor: '#4CAF50',
+},
+equipBtnText: {
+color: 'white',
+fontSize: 12,
+fontWeight: 'bold',
+},
+buyBtn: {
+backgroundColor: '#32808D',
+paddingHorizontal: 15,
+paddingVertical: 8,
+borderRadius: 8,
+marginTop: 4,
+},
+buyBtnText: {
+color: 'white',
+fontSize: 12,
+fontWeight: 'bold',
+},
+priceText: {
+fontSize: 14,
+fontWeight: 'bold',
+color: '#333',
+},
+};
