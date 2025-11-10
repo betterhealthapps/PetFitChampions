@@ -6,11 +6,13 @@ PetFit Champions is a gamified health tracking mobile app built with React Nativ
 ## Current Status (Phase 1 MVP - Completed)
 The app includes:
 - **Authentication**: Email/password signup and login with persistent sessions
+- **Pet Selection**: Choose from 4 unique starter pets with distinct stat specializations
 - **Home Dashboard**: Displays username, pet info, XP progress, daily activity summary
 - **Health Tracking**: Manual inputs for 8 health activities (steps, sleep, mood, water, meditation, meals, journal, breathing)
 - **XP System**: Automatic XP calculation based on tracked activities with configurable conversion rates
-- **Pet System**: Single starter pet (Vigor the Dog) with 7 stats and level progression
-- **Leveling**: Automatic level-up system (1-50) with gem rewards equal to current level
+- **Pet System**: 4 starter pets with 7 stats, level progression, and evolution system
+- **Leveling**: Automatic level-up system (1-50) with gem rewards and +2 stat growth per level
+- **Evolution**: 3-tier evolution system (Tier 1→2 at level 16, Tier 2→3 at level 36) with 50% stat boosts
 - **Navigation**: Bottom tab navigation between Home, Track, Pet, and Profile screens
 - **Data Persistence**: Local storage using AsyncStorage for user, pet, and health data
 
@@ -21,6 +23,7 @@ PetFitChampions/
 │   ├── screens/          # Screen components
 │   │   ├── LoginScreen.js
 │   │   ├── SignUpScreen.js
+│   │   ├── PetSelectionScreen.js
 │   │   ├── HomeScreen.js
 │   │   ├── TrackScreen.js
 │   │   ├── PetScreen.js
@@ -64,17 +67,35 @@ PetFitChampions/
 - **Level 11-25**: 1500 XP per level
 - **Level 26-50**: 2500 XP per level
 - **Gem Rewards**: On level-up, earn gems equal to current level (e.g., Level 5 = 5 gems)
+- **Stat Growth**: All stats increase by +2 per level gained
 
-## Starter Pet (MVP)
-**Vigor (Dog)** - High Stamina
-- Base Stats:
-  - Health: 80
-  - Energy: 70
-  - Strength: 65
-  - Defense: 60
-  - Stamina: 90 (High)
-  - Agility: 55
-  - Attack: 70
+## Evolution System
+- **Tier 1 (Basic)**: Levels 1-15
+- **Tier 2 (Advanced)**: Levels 16-35 (Cost: 150 gems, +50% all stats)
+- **Tier 3 (Master)**: Levels 36+ (Cost: 500 gems, +50% all stats)
+
+## Starter Pets
+Users choose one of 4 unique pets at signup:
+
+**1. Vigor (Dog)** - High Stamina
+- Health: 80, Energy: 70, Strength: 65, Defense: 60
+- Stamina: 90 (High), Agility: 55, Attack: 70
+- Best for: Endurance-based strategies
+
+**2. Zen (Cat)** - High Agility
+- Health: 70, Energy: 75, Strength: 55, Defense: 50
+- Stamina: 60, Agility: 95 (High), Attack: 65
+- Best for: Speed and evasion tactics
+
+**3. Atlas (Bear)** - High Strength & Defense
+- Health: 100, Energy: 65, Strength: 95 (High), Defense: 90 (High)
+- Stamina: 70, Agility: 45, Attack: 85
+- Best for: Tank and power builds
+
+**4. Swift (Bird)** - High Energy
+- Health: 65, Energy: 95 (High), Strength: 50, Defense: 45
+- Stamina: 75, Agility: 85, Attack: 60
+- Best for: Sustained combat and energy management
 
 ## Running the App
 The app runs on port 5000 with Expo web. Use the webview to interact with the app in your browser.
@@ -94,6 +115,15 @@ The app runs on port 5000 with Expo web. Use the webview to interact with the ap
 - Gem stealing mechanics
 
 ## Recent Changes
+- **November 10, 2025 (Update 3)**: Complete Pet System implementation
+  - Pet Selection Screen: Choose from 4 unique starter pets (Vigor, Zen, Atlas, Swift)
+  - Each pet has distinct stat specializations and descriptions
+  - Stat Growth System: All stats increase by +2 per level gained
+  - Evolution System: 3-tier progression with 50% stat boosts (Tier 2 at level 16, Tier 3 at level 36)
+  - Enhanced Pet Screen: Shows all 7 stats with progress bars, evolution button when eligible
+  - Evolution costs: 150 gems (Tier 2), 500 gems (Tier 3)
+  - Navigation flow: Users select pet after signup, before accessing main app
+
 - **November 10, 2025 (Update 2)**: Enhanced Track screen with improved UI controls
   - Steps input: Added large increment/decrement buttons (±1000) and quick buttons (-100, +100, +500)
   - Sleep input: Replaced text field with interactive slider (0-12 hours, 0.5 step increments)
