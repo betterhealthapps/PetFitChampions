@@ -75,7 +75,7 @@ export default function GemShopScreen({ navigation }) {
       return;
     }
 
-    const currentValue = currentPet.baseStats[boost.stat];
+    const currentValue = currentPet.baseStats?.[boost.stat] || currentPet.stats?.[boost.stat] || 0;
     if (currentValue >= 100) {
       showMessage(`${boost.stat} is already at maximum (100)!`);
       return;
@@ -85,20 +85,28 @@ export default function GemShopScreen({ navigation }) {
     await saveGems(newGems);
     setUserGems(newGems);
 
+    const newStatValue = Math.min(100, currentValue + 5);
+    
+    const updatedBaseStats = {
+      ...(currentPet.baseStats || currentPet.stats),
+      [boost.stat]: newStatValue,
+    };
+
     const updatedStats = {
-      ...currentPet.baseStats,
-      [boost.stat]: Math.min(100, currentValue + 5),
+      ...(currentPet.stats || currentPet.baseStats),
+      [boost.stat]: newStatValue,
     };
 
     const updatedPet = {
       ...currentPet,
-      baseStats: updatedStats,
+      baseStats: updatedBaseStats,
+      stats: updatedStats,
     };
 
     await savePet(updatedPet);
     updatePet(updatedPet);
 
-    showMessage(`${boost.name} applied! ${boost.stat} increased to ${updatedStats[boost.stat]}`);
+    showMessage(`${boost.name} applied! ${boost.stat} increased to ${newStatValue}`);
   };
 
   const purchaseTrick = async (trick) => {
