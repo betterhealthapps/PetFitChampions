@@ -4,6 +4,7 @@ import { Card, Title, Text, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PetContext } from '../context/PetContext';
 import { BATTLE_CONSTANTS, COLORS } from '../data/constants';
+import { getBattleStats, saveBattleStats } from '../utils/storage';
 
 export default function PvPResultScreen({ route, navigation }) {
   const { victory } = route.params;
@@ -36,6 +37,17 @@ export default function PvPResultScreen({ route, navigation }) {
       const newTotal = await spendGems(loss);
       setNewGemTotal(newTotal);
     }
+
+    const currentStats = await getBattleStats();
+    const pvpStats = currentStats.pvp || { wins: 0, losses: 0 };
+    const updatedStats = {
+      ...currentStats,
+      pvp: {
+        wins: victory ? pvpStats.wins + 1 : pvpStats.wins,
+        losses: victory ? pvpStats.losses : pvpStats.losses + 1,
+      },
+    };
+    await saveBattleStats(updatedStats);
   };
 
   const handleReturnToMatchmaking = () => {

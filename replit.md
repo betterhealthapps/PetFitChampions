@@ -13,11 +13,14 @@ The app includes:
 - **Pet System**: 4 starter pets with 7 stats, level progression, and evolution system
 - **Leveling**: Automatic level-up system (1-50) with gem rewards and +2 stat growth per level
 - **Evolution**: 3-tier evolution system (Tier 1→2 at level 16, Tier 2→3 at level 36) with 50% stat boosts
-- **Battle System**: Turn-based PvP battles with AI opponents, 3 actions (Attack/Defend/Special), energy management
-- **Energy System**: 100 max energy, 20 cost per battle, regenerates 1 energy per minute
-- **Battle Rewards**: +15 gems for victory, -5 gems for defeat
-- **Navigation**: Bottom tab navigation with Battle tab, locked battle screens prevent mid-battle exits
-- **Data Persistence**: Local storage using AsyncStorage for user, pet, health, energy, and gems data
+- **Battle Mode Selector**: Unified screen with 3 battle modes (PvP Arena, Bot Arena, Pet Runner)
+- **PvP Arena**: Turn-based battles with AI opponents, 20 energy, 10-30 gems, win/loss tracking
+- **Bot Arena**: Practice battles (placeholder), 10 energy, 5-15 gems, 3 difficulty levels
+- **Pet Runner**: Endless runner mini-game (placeholder), 5 energy, 1 gem per 10 points
+- **Energy System**: 100 max energy, variable cost per mode, regenerates 1 energy per minute
+- **Battle Stats**: Win/loss tracking for all battle modes, persisted to local storage
+- **Navigation**: Bottom tab navigation with Battle tab, locked PvP battle screens prevent mid-battle exits
+- **Data Persistence**: Local storage using AsyncStorage for user, pet, health, energy, gems, and battle stats
 - **Visual Assets**: App icon and 12 pet evolution illustrations (4 pets × 3 tiers)
 
 ## Project Structure
@@ -30,9 +33,12 @@ PetFitChampions/
 │   │   ├── PetSelectionScreen.js
 │   │   ├── HomeScreen.js
 │   │   ├── TrackScreen.js
-│   │   ├── BattleMatchmakingScreen.js
-│   │   ├── BattleScreen.js
-│   │   ├── BattleResultScreen.js
+│   │   ├── BattleScreen.js (Mode selector)
+│   │   ├── PvPArenaScreen.js (PvP matchmaking)
+│   │   ├── PvPBattleScreen.js (Turn-based combat)
+│   │   ├── PvPResultScreen.js (Victory/defeat)
+│   │   ├── BotArenaScreen.js (Bot practice - placeholder)
+│   │   ├── RunnerGameScreen.js (Endless runner - placeholder)
 │   │   ├── PetScreen.js
 │   │   └── ProfileScreen.js
 │   ├── components/       # Reusable UI components
@@ -110,14 +116,36 @@ Users choose one of 4 unique pets at signup:
 The app runs on port 5000 with Expo web. Use the webview to interact with the app in your browser.
 
 ## Battle System
-- **Energy Cost**: 20 energy per battle
+
+### Battle Modes
+The Battle tab opens a mode selector with 3 battle types:
+
+**1. PvP Arena** ⚔️
+- **Energy Cost**: 20 per battle
+- **Gem Rewards**: +15 for victory, -5 for defeat
+- **Gameplay**: Turn-based combat with 3 actions (Attack/Defend/Special)
+- **AI Opponents**: Level-scaled, randomized stats, intelligent action selection
+- **Battle Flow**: Matchmaking → Battle (locked) → Result
+- **Stats Tracked**: Wins and losses
+
+**2. Bot Arena** 🤖 (Coming Soon)
+- **Energy Cost**: 10 per battle
+- **Gem Rewards**: 5-15 gems (varies by difficulty)
+- **Difficulties**: Easy, Medium, Hard
+- **Purpose**: Practice battles with lower stakes
+- **Stats Tracked**: Wins/losses per difficulty level
+
+**3. Pet Runner** 🏃 (Coming Soon)
+- **Energy Cost**: 5 per run
+- **Gem Rewards**: 1 gem per 10 points scored
+- **Gameplay**: Endless obstacle course runner
+- **Daily Limit**: 50 gems per day
+- **Stats Tracked**: High score, daily gems earned, total runs
+
+### Energy System
 - **Max Energy**: 100
 - **Regen Rate**: 1 energy per minute
-- **Victory Reward**: +15 gems
-- **Defeat Penalty**: -5 gems (max)
-- **Actions**: Attack (basic damage), Defend (50% damage reduction), Special (high damage using energy stat)
-- **AI Opponents**: Level-scaled, randomized stats, intelligent action selection
-- **Battle Flow**: Matchmaking → Battle (locked, no back navigation) → Result screen
+- **Costs**: Variable by mode (PvP: 20, Bot: 10, Runner: 5)
 
 ## Color Scheme
 - **Primary (Teal)**: #32808D - Main brand color for buttons, headers, important text
@@ -135,6 +163,17 @@ The app runs on port 5000 with Expo web. Use the webview to interact with the ap
 - Social features (friend battles, guilds)
 
 ## Recent Changes
+- **November 10, 2025 (Update 5)**: Multiple Battle Modes
+  - Restructured battle system to support 3 distinct game modes
+  - Created unified Battle Mode Selector screen with energy display and mode cards
+  - PvP Arena: Fully functional turn-based battles with win/loss tracking
+  - Bot Arena: Placeholder screen with 3 difficulty levels (Easy, Medium, Hard)
+  - Pet Runner: Placeholder screen with game instructions and stats display
+  - Battle stats persistence: Win/loss records saved to AsyncStorage for all modes
+  - Reorganized battle screens: BattleScreen → PvPBattleScreen, etc.
+  - Updated navigation structure to support multiple battle flows
+  - Each mode has unique energy costs and gem rewards
+
 - **November 10, 2025 (Update 4)**: Battle System & Visual Assets
   - Complete turn-based battle system with AI opponents
   - Energy management: 100 max, 20 per battle, 1/min regeneration
