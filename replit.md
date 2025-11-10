@@ -7,7 +7,12 @@ PetFit Champions is a gamified React Native mobile application where users track
 - **Bot Arena Implementation**: Fully functional turn-based battle system with three difficulty levels (Easy/Medium/Hard), trait-aware AI, player-baseline stat scaling, and balanced reward distribution.
 - **Pet Runner Implementation**: Complete endless runner mini-game with obstacle avoidance, score-based progression, gem/XP rewards, and anti-farming daily gem cap (50/day).
 - **Battle Logic Enhancement**: Implemented comprehensive battle utilities with trait-aware AI strategy, dodge mechanics, damage calculation, and reward balancing across all modes.
-- **Critical Bug Fixes**: All battle screens now correctly use PetContext.addGems and PetContext.addXP for proper level progression and gem tracking.
+- **Critical Bug Fixes (Latest Session)**:
+  - Fixed Bot Arena stats persistence by consolidating all battle modes to use getBattleStats/saveBattleStats consistently
+  - Added BotArenaResultScreen with proper navigation to show battle outcomes, rewards breakdown, and difficulty-specific win/loss records
+  - Fixed Pet evolution button: Tier type coercion (string to number) now allows pets to evolve from Tier 1 to Tier 2 at level 16
+  - Implemented backward-compatible migration for Runner stats (dailyGems→todayGems) to prevent NaN totals
+- **Cosmetics Stat Boost System**: All 15 cosmetic items (5 hats, 5 accessories, 5 skins) now display specific stat bonuses in the Gem Shop with visual stat boost pills, making cosmetic choices strategically meaningful in battles.
 
 ## User Preferences
 None specified yet.
