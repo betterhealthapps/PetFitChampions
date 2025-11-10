@@ -6,11 +6,12 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { AuthProvider, AuthContext } from './src/context/AuthContext';
-import { PetProvider } from './src/context/PetContext';
+import { PetProvider, PetContext } from './src/context/PetContext';
 import { HealthProvider } from './src/context/HealthContext';
 
 import LoginScreen from './src/screens/LoginScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
+import PetSelectionScreen from './src/screens/PetSelectionScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import TrackScreen from './src/screens/TrackScreen';
 import PetScreen from './src/screens/PetScreen';
@@ -84,15 +85,24 @@ function MainTabs() {
 }
 
 function Navigation() {
-  const { user, loading } = useContext(AuthContext);
+  const { user, loading: authLoading } = useContext(AuthContext);
+  const { pet, loading: petLoading } = useContext(PetContext);
 
-  if (loading) {
+  if (authLoading || petLoading) {
     return null;
   }
 
   return (
     <NavigationContainer>
-      {user ? <MainTabs /> : <AuthStack />}
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!user ? (
+          <Stack.Screen name="Auth" component={AuthStack} />
+        ) : !pet ? (
+          <Stack.Screen name="PetSelection" component={PetSelectionScreen} />
+        ) : (
+          <Stack.Screen name="MainTabs" component={MainTabs} />
+        )}
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }

@@ -1,10 +1,13 @@
-import React, { useContext } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Card, Title, Text, ProgressBar } from 'react-native-paper';
+import React, { useContext, useState } from 'react';
+import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { Card, Title, Text, ProgressBar, Button, Snackbar } from 'react-native-paper';
 import { PetContext } from '../context/PetContext';
+import { EVOLUTION_TIERS } from '../data/constants';
 
 export default function PetScreen() {
-  const { pet, gems, getLevelProgress } = useContext(PetContext);
+  const { pet, gems, getLevelProgress, evolvePet } = useContext(PetContext);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   if (!pet) {
     return (
@@ -16,6 +19,39 @@ export default function PetScreen() {
 
   const levelProgress = getLevelProgress();
   const stats = pet.stats || {};
+  const currentTier = pet.tier || 1;
+  
+  // Evolution eligibility
+  const canEvolveTo2 = currentTier === 1 && pet.level >= 16;
+  const canEvolveTo3 = currentTier === 2 && pet.level >= 36;
+  const canEvolve = canEvolveTo2 || canEvolveTo3;
+  const evolutionCost = canEvolveTo2 ? EVOLUTION_TIERS.TIER_2.cost : EVOLUTION_TIERS.TIER_3.cost;
+  const hasEnoughGems = gems >= evolutionCost;
+
+  const handleEvolution = () => {
+    if (!canEvolve) return;
+    
+    Alert.alert(
+      'Evolve Pet?',
+      `Evolve to Tier ${currentTier + 1} for ${evolutionCost} gems?\nThis will boost all stats by 50%!`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Evolve',
+          onPress: async () => {
+            try {
+              await evolvePet(evolutionCost);
+              setSnackbarMessage(`🎉 Evolved to Tier ${currentTier + 1}! Stats increased by 50%!`);
+              setSnackbarVisible(true);
+            } catch (error) {
+              setSnackbarMessage(error.message);
+              setSnackbarVisible(true);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -113,21 +149,54 @@ export default function PetScreen() {
           </Card.Content>
         </Card>
 
-        {/* Tier Info */}
+        {/* Evolution */}
         <Card style={styles.card}>
           <Card.Content>
             <Text style={styles.sectionTitle}>Evolution</Text>
             <Text style={styles.tierText}>
-              Tier {pet.tier || 1} - {pet.tier === 1 ? 'Basic' : pet.tier === 2 ? 'Advanced' : 'Master'}
+              Tier {currentTier} - {currentTier === 1 ? 'Basic' : currentTier === 2 ? 'Advanced' : 'Master'}
             </Text>
-            <Text style={styles.tierInfo}>
-              {pet.level < 16 && 'Reach level 16 to unlock Tier 2 evolution (150 gems)'}
-              {pet.level >= 16 && pet.level < 36 && 'Reach level 36 to unlock Tier 3 evolution (500 gems)'}
-              {pet.level >= 36 && 'Maximum tier reached!'}
-            </Text>
+            
+            {canEvolve && (
+              <View style={styles.evolutionContainer}>
+                <Text style={styles.evolutionText}>
+                  Ready to evolve to Tier {currentTier + 1}!
+                </Text>
+                <Text style={styles.evolutionCost}>Cost: {evolutionCost} gems</Text>
+                <Text style={styles.evolutionBonus}>+50% to all stats!</Text>
+                <Button
+                  mode="contained"
+                  onPress={handleEvolution}
+                  disabled={!hasEnoughGems}
+                  icon="star"
+                  style={styles.evolutionButton}
+                >
+                  {hasEnoughGems ? 'Evolve Now' : `Need ${evolutionCost - gems} more gems`}
+                </Button>
+              </View>
+            )}
+            
+            {!canEvolve && currentTier < 3 && (
+              <Text style={styles.tierInfo}>
+                {currentTier === 1 && `Reach level 16 to unlock Tier 2 evolution (${EVOLUTION_TIERS.TIER_2.cost} gems)`}
+                {currentTier === 2 && `Reach level 36 to unlock Tier 3 evolution (${EVOLUTION_TIERS.TIER_3.cost} gems)`}
+              </Text>
+            )}
+            
+            {currentTier === 3 && (
+              <Text style={styles.tierInfo}>Maximum tier reached! 🏆</Text>
+            )}
           </Card.Content>
         </Card>
       </View>
+      
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+      >
+        {snackbarMessage}
+      </Snackbar>
     </ScrollView>
   );
 }
@@ -226,5 +295,32 @@ const styles = StyleSheet.create({
   tierInfo: {
     fontSize: 14,
     color: '#666',
+  },
+  evolutionContainer: {
+    marginTop: 12,
+    padding: 16,
+    backgroundColor: '#f3e5f5',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  evolutionText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#6200ee',
+    marginBottom: 8,
+  },
+  evolutionCost: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  evolutionBonus: {
+    fontSize: 14,
+    color: '#43a047',
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  evolutionButton: {
+    marginTop: 8,
   },
 });

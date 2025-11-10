@@ -74,3 +74,21 @@ export const getDefaultPet = () => ({
   tier: 1,
   stats: { ...STARTER_PETS.VIGOR.baseStats },
 });
+
+// Create a new pet from template by ID
+export const createPetFromTemplate = (petId) => {
+  const petKey = petId.toUpperCase();
+  const template = STARTER_PETS[petKey];
+  
+  if (!template) {
+    throw new Error(`Pet template not found: ${petId}`);
+  }
+  
+  return {
+    ...template,
+    level: 1,
+    xp: 0,
+    tier: 1,
+    stats: { ...template.baseStats },
+  };
+};

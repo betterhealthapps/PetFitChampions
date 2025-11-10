@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { savePet, getPet, saveGems, getGems } from '../utils/storage';
-import { getDefaultPet } from '../data/petTemplates';
+import { createPetFromTemplate } from '../data/petTemplates';
 import { getLevelFromXP, getXPProgressInLevel, processLevelUp } from '../utils/xpCalculations';
 
 export const PetContext = createContext();
@@ -16,18 +16,33 @@ export const PetProvider = ({ children }) => {
   }, []);
 
   const loadPetData = async () => {
-    let petData = await getPet();
+    const petData = await getPet();
     const gemsData = await getGems();
     
-    // If no pet exists, create default pet (Vigor)
-    if (!petData) {
-      petData = getDefaultPet();
-      await savePet(petData);
-    }
-    
+    // Don't create default pet - let user select from PetSelectionScreen
     setPet(petData);
     setGems(gemsData);
     setLoading(false);
+  };
+
+  // Select a starter pet
+  const selectPet = async (petId) => {
+    const newPet = createPetFromTemplate(petId);
+    setPet(newPet);
+    await savePet(newPet);
+    return newPet;
+  };
+
+  // Calculate stat increase for level up
+  const increaseStats = (currentStats, levelsGained) => {
+    const statIncrease = 2; // Each stat increases by 2 per level
+    const newStats = { ...currentStats };
+    
+    Object.keys(newStats).forEach((stat) => {
+      newStats[stat] = currentStats[stat] + (statIncrease * levelsGained);
+    });
+    
+    return newStats;
   };
 
   // Add XP to pet and handle level ups
@@ -37,14 +52,24 @@ export const PetProvider = ({ children }) => {
     const oldTotalXP = pet.xp || 0;
     const newTotalXP = oldTotalXP + xpAmount;
     
+    const oldLevel = pet.level || 1;
+    
     // Check for level up
     const levelUpResult = processLevelUp(oldTotalXP, newTotalXP);
+    
+    // Calculate new stats if leveled up
+    let newStats = pet.stats;
+    if (levelUpResult.leveledUp) {
+      const levelsGained = levelUpResult.newLevel - oldLevel;
+      newStats = increaseStats(pet.stats, levelsGained);
+    }
     
     // Update pet
     const updatedPet = {
       ...pet,
       xp: newTotalXP,
       level: levelUpResult.newLevel,
+      stats: newStats,
     };
     
     setPet(updatedPet);
@@ -82,13 +107,51 @@ export const PetProvider = ({ children }) => {
     return newGems;
   };
 
+  // Evolve pet to next tier
+  const evolvePet = async (tierCost) => {
+    if (!pet) return null;
+    if (gems < tierCost) {
+      throw new Error('Not enough gems');
+    }
+    
+    const newTier = (pet.tier || 1) + 1;
+    if (newTier > 3) {
+      throw new Error('Already at max tier');
+    }
+    
+    // Deduct gems
+    const newGems = gems - tierCost;
+    setGems(newGems);
+    await saveGems(newGems);
+    
+    // Boost stats on evolution (50% increase)
+    const evolvedStats = {};
+    Object.keys(pet.stats).forEach((stat) => {
+      evolvedStats[stat] = Math.floor(pet.stats[stat] * 1.5);
+    });
+    
+    // Update pet
+    const evolvedPet = {
+      ...pet,
+      tier: newTier,
+      stats: evolvedStats,
+    };
+    
+    setPet(evolvedPet);
+    await savePet(evolvedPet);
+    
+    return evolvedPet;
+  };
+
   const value = {
     pet,
     gems,
     loading,
+    selectPet,
     addXP,
     getLevelProgress,
     spendGems,
+    evolvePet,
   };
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;
