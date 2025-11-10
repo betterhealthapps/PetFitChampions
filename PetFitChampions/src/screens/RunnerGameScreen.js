@@ -1,576 +1,925 @@
-import React, { useContext, useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Animated, Alert, Dimensions } from 'react-native';
-import { Card, Title, Text, Button, Snackbar } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Animated,
+  StyleSheet,
+  Alert,
+  Dimensions,
+  ScrollView,
+  Easing,
+} from 'react-native';
 import { BattleContext } from '../context/BattleContext';
 import { PetContext } from '../context/PetContext';
-import { COLORS } from '../data/constants';
 import { calculateRunnerReward } from '../utils/battleLogic';
 import { saveBattleStats, getBattleStats } from '../utils/storage';
+import { STARTER_PETS } from '../data/petTemplates';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const GROUND_HEIGHT = 120;
+const GAME_HEIGHT = 500;
+const GROUND_HEIGHT = 100;
 const PET_SIZE = 50;
-const OBSTACLE_WIDTH = 40;
-const OBSTACLE_HEIGHT = 60;
-const JUMP_HEIGHT = 120;
+
+const LAND_JUMP_VELOCITY = -450;
+const LAND_GRAVITY = 1400;
+
+const FLYING_FLAP_FORCE = -350;
+const FLYING_GRAVITY = 800;
+const FLYING_MAX_FALL_SPEED = 400;
+
+const INITIAL_SPEED = 250;
 
 export default function RunnerGameScreen({ navigation }) {
-  const { energy, consumeEnergy, hasEnoughEnergy, maxEnergy } = useContext(BattleContext);
-  const { pet, addGems } = useContext(PetContext);
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  
-  const [gameState, setGameState] = useState('menu');
+  const [gameState, setGameState] = useState('ready');
   const [score, setScore] = useState(0);
-  const [isJumping, setIsJumping] = useState(false);
+  const [coins, setCoins] = useState(0);
+  const [distance, setDistance] = useState(0);
+  const [highScore, setHighScore] = useState(0);
+  const [speed, setSpeed] = useState(INITIAL_SPEED);
+
+  const { energy, consumeEnergy, hasEnoughEnergy } = useContext(BattleContext);
+  const { pet, addGems, addXP } = useContext(PetContext);
+  
+  const [petConfig, setPetConfig] = useState(null);
+  const [isFlying, setIsFlying] = useState(false);
+
   const [obstacles, setObstacles] = useState([]);
-  const [runnerStats, setRunnerStats] = useState({ highScore: 0, totalRuns: 0, todayGems: 0 });
+  const [platforms, setPlatforms] = useState([]);
+  const [coinsList, setCoinsList] = useState([]);
+  const [powerUps, setPowerUps] = useState([]);
+
+  const [isOnGround, setIsOnGround] = useState(true);
+  const [velocityY, setVelocityY] = useState(0);
+  const [jumpCount, setJumpCount] = useState(0);
+  const [maxJumps, setMaxJumps] = useState(1);
+
+  const [hasExtraLife, setHasExtraLife] = useState(false);
+  const [canDestroyObstacles, setCanDestroyObstacles] = useState(false);
+  const [canFireBreath, setCanFireBreath] = useState(false);
+  const [canResurrect, setCanResurrect] = useState(false);
+  const [resurrected, setResurrected] = useState(false);
+  const [hasSpeedBoost, setHasSpeedBoost] = useState(false);
+  const [speedBoostTimer, setSpeedBoostTimer] = useState(null);
+
+  const [dailyGems, setDailyGems] = useState(0);
 
   const petY = useRef(new Animated.Value(GROUND_HEIGHT)).current;
+  const petRotation = useRef(new Animated.Value(0)).current;
+  const petFlap = useRef(new Animated.Value(0)).current;
   const gameLoop = useRef(null);
-  const obstacleId = useRef(0);
-
-  const ENERGY_COST = 5;
+  const spawnTimer = useRef(null);
+  const lastFrameTime = useRef(Date.now());
 
   useEffect(() => {
-    loadRunnerStats();
+    loadGameData();
+    return () => {
+      if (gameLoop.current) cancelAnimationFrame(gameLoop.current);
+      if (spawnTimer.current) clearInterval(spawnTimer.current);
+    };
   }, []);
 
-  useEffect(() => {
-    if (gameState === 'playing') {
-      startGame();
-    } else {
-      stopGame();
-    }
-    return () => stopGame();
-  }, [gameState]);
-
-  const loadRunnerStats = async () => {
-    const battleStats = await getBattleStats();
-    if (battleStats && battleStats.runner) {
-      const stats = battleStats.runner;
-      if (stats.dailyGems !== undefined && stats.todayGems === undefined) {
-        stats.todayGems = stats.dailyGems;
+  const loadGameData = async () => {
+    try {
+      if (!pet) {
+        console.error('No pet found');
+        return;
       }
-      setRunnerStats(stats);
-    }
-  };
 
-  const handleStartGame = async () => {
-    if (!hasEnoughEnergy(ENERGY_COST)) {
-      setSnackbarMessage(`Need ${ENERGY_COST} energy to play`);
-      setSnackbarVisible(true);
-      return;
-    }
+      const petKey = pet.id ? pet.id.toUpperCase() : null;
+      if (!petKey) {
+        console.error('Pet has no ID');
+        return;
+      }
 
-    await consumeEnergy(ENERGY_COST);
-    setScore(0);
-    setObstacles([]);
-    setGameState('playing');
+      const config = STARTER_PETS[petKey];
+      if (!config) {
+        console.error('Pet config not found for:', pet.id, 'Available keys:', Object.keys(STARTER_PETS));
+        return;
+      }
+
+      setPetConfig(config);
+      setIsFlying(config.category === 'flying');
+
+      switch (config.runnerAbility?.effect) {
+        case 'tripleJump':
+          setMaxJumps(3);
+          break;
+        case 'extraLife':
+          setHasExtraLife(true);
+          break;
+        case 'destroyObstacles':
+          setCanDestroyObstacles(true);
+          break;
+        case 'fireBreath':
+          setCanFireBreath(true);
+          break;
+        case 'resurrect':
+          setCanResurrect(true);
+          break;
+        case 'speedOnJump':
+          setHasSpeedBoost(true);
+          break;
+        case 'flappyControl':
+          break;
+      }
+
+      const battleStats = await getBattleStats();
+      if (battleStats && battleStats.runner) {
+        setHighScore(battleStats.runner.highScore || 0);
+        setDailyGems(battleStats.runner.todayGems || 0);
+      }
+    } catch (error) {
+      console.error('Error loading game data:', error);
+    }
   };
 
   const startGame = () => {
-    let currentScore = 0;
-    let obstacleSpawnCounter = 0;
-    const spawnInterval = 80;
+    if (!hasEnoughEnergy(5)) {
+      Alert.alert('Not Enough Energy', 'You need 5 energy to play!');
+      return;
+    }
 
-    gameLoop.current = setInterval(() => {
-      currentScore += 1;
-      setScore(currentScore);
-      obstacleSpawnCounter += 1;
+    consumeEnergy(5);
 
-      if (obstacleSpawnCounter >= spawnInterval) {
-        spawnObstacle();
-        obstacleSpawnCounter = 0;
-      }
+    setScore(0);
+    setCoins(0);
+    setDistance(0);
+    setSpeed(INITIAL_SPEED);
+    setObstacles([]);
+    setPlatforms([]);
+    setCoinsList([]);
+    setPowerUps([]);
+    setJumpCount(0);
+    setVelocityY(0);
+    setIsOnGround(!isFlying);
+    setResurrected(false);
+    if (speedBoostTimer) {
+      clearTimeout(speedBoostTimer);
+      setSpeedBoostTimer(null);
+    }
 
-      setObstacles(prev => {
-        const updated = prev.map(obs => ({
-          ...obs,
-          x: obs.x - (5 + currentScore * 0.01)
-        })).filter(obs => obs.x > -OBSTACLE_WIDTH);
-        
-        checkCollision(updated);
-        return updated;
-      });
-    }, 16);
+    petY.setValue(isFlying ? GROUND_HEIGHT + 250 : GROUND_HEIGHT);
+    petRotation.setValue(0);
+    petFlap.setValue(0);
+    lastFrameTime.current = Date.now();
+
+    setGameState('playing');
+
+    spawnTimer.current = setInterval(spawnGameObjects, 1500);
+    gameLoop.current = requestAnimationFrame(updateGame);
   };
 
-  const stopGame = () => {
-    if (gameLoop.current) {
-      clearInterval(gameLoop.current);
-      gameLoop.current = null;
+  const spawnGameObjects = () => {
+    const random = Math.random();
+
+    if (isFlying) {
+      if (random < 0.4) {
+        spawnFlyingObstacle();
+      } else if (random < 0.7) {
+        spawnFloatingCoins();
+      }
+    } else {
+      if (random < 0.3) {
+        spawnPlatform();
+      } else if (random < 0.5) {
+        spawnGroundObstacle();
+      } else if (random < 0.7) {
+        spawnCoins();
+      }
     }
   };
 
-  const spawnObstacle = () => {
-    const newObstacle = {
-      id: obstacleId.current++,
+  const spawnPlatform = () => {
+    const height = 150 + Math.random() * 150;
+    const width = 80 + Math.random() * 60;
+    setPlatforms(prev => [...prev, {
+      id: Date.now() + Math.random(),
       x: SCREEN_WIDTH,
-      type: Math.random() > 0.7 ? 'tall' : 'normal',
-    };
-    setObstacles(prev => [...prev, newObstacle]);
+      y: GROUND_HEIGHT + height,
+      width,
+      height: 20,
+    }]);
+
+    const coinCount = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < coinCount; i++) {
+      setCoinsList(prev => [...prev, {
+        id: Date.now() + Math.random() + i,
+        x: SCREEN_WIDTH + (i * 35),
+        y: GROUND_HEIGHT + height + 25,
+        collected: false,
+      }]);
+    }
+  };
+
+  const spawnGroundObstacle = () => {
+    const types = [
+      { height: 50, width: 35, icon: '🪨', type: 'rock', destroyable: true },
+      { height: 60, width: 30, icon: '🌵', type: 'cactus', destroyable: false },
+      { height: 70, width: 40, icon: '🔥', type: 'fire', destroyable: false },
+      { height: 45, width: 45, icon: '💀', type: 'spike', destroyable: false },
+    ];
+    const obstacle = types[Math.floor(Math.random() * types.length)];
+
+    setObstacles(prev => [...prev, {
+      id: Date.now(),
+      x: SCREEN_WIDTH,
+      y: GROUND_HEIGHT,
+      ...obstacle,
+    }]);
+  };
+
+  const spawnFlyingObstacle = () => {
+    const minHeight = 120;
+    const maxHeight = 350;
+    const height = minHeight + Math.random() * (maxHeight - minHeight);
+    const types = [
+      { icon: '🦅', width: 45, height: 40 },
+      { icon: '☁️', width: 60, height: 50 },
+      { icon: '⚡', width: 35, height: 45 },
+      { icon: '🌪️', width: 50, height: 55 },
+    ];
+
+    const obstacle = types[Math.floor(Math.random() * types.length)];
+
+    setObstacles(prev => [...prev, {
+      id: Date.now(),
+      x: SCREEN_WIDTH,
+      y: GROUND_HEIGHT + height,
+      ...obstacle,
+      type: 'flying',
+      destroyable: obstacle.icon === '☁️',
+    }]);
+  };
+
+  const spawnCoins = () => {
+    const pattern = Math.random() < 0.5 ? 'line' : 'arc';
+    const coinCount = 5;
+    const startHeight = 150 + Math.random() * 100;
+    for (let i = 0; i < coinCount; i++) {
+      let y;
+      if (pattern === 'line') {
+        y = GROUND_HEIGHT + startHeight;
+      } else {
+        const progress = i / (coinCount - 1);
+        const arcHeight = Math.sin(progress * Math.PI) * 80;
+        y = GROUND_HEIGHT + startHeight + arcHeight;
+      }
+
+      setCoinsList(prev => [...prev, {
+        id: Date.now() + i,
+        x: SCREEN_WIDTH + (i * 40),
+        y,
+        collected: false,
+      }]);
+    }
+  };
+
+  const spawnFloatingCoins = () => {
+    const centerHeight = 200 + Math.random() * 100;
+    const coinCount = 4;
+    for (let i = 0; i < coinCount; i++) {
+      setCoinsList(prev => [...prev, {
+        id: Date.now() + i,
+        x: SCREEN_WIDTH + (i * 50),
+        y: GROUND_HEIGHT + centerHeight + (Math.random() - 0.5) * 100,
+        collected: false,
+      }]);
+    }
+  };
+
+  const updateGame = () => {
+    const now = Date.now();
+    const deltaTime = Math.min((now - lastFrameTime.current) / 1000, 0.05);
+    lastFrameTime.current = now;
+    if (gameState !== 'playing') return;
+
+    setDistance(prev => prev + speed * deltaTime);
+    setScore(prev => prev + deltaTime * 10);
+    setSpeed(prev => Math.min(prev + deltaTime * 5, 450));
+
+    updatePlayerPhysics(deltaTime);
+    updateGameObjects(deltaTime);
+
+    gameLoop.current = requestAnimationFrame(updateGame);
+  };
+
+  const updatePlayerPhysics = (deltaTime) => {
+    if (isFlying) {
+      setVelocityY(prev => {
+        const gravity = FLYING_GRAVITY * deltaTime;
+        const newVelocity = Math.min(prev + gravity, FLYING_MAX_FALL_SPEED);
+        const currentY = petY._value;
+        let newY = currentY - newVelocity * deltaTime;
+        
+        newY = Math.max(GROUND_HEIGHT, Math.min(newY, GROUND_HEIGHT + 400));
+        
+        if (newY <= GROUND_HEIGHT) {
+          newY = GROUND_HEIGHT + 50;
+          return 0;
+        }
+        
+        petY.setValue(newY);
+        return newVelocity;
+      });
+    } else {
+      setVelocityY(prev => {
+        const newVelocity = prev + LAND_GRAVITY * deltaTime;
+        const currentY = petY._value;
+        const newY = currentY - newVelocity * deltaTime;
+
+        if (newY <= GROUND_HEIGHT) {
+          petY.setValue(GROUND_HEIGHT);
+          setIsOnGround(true);
+          setJumpCount(0);
+          petRotation.setValue(0);
+          return 0;
+        }
+
+        let onPlatform = false;
+        platforms.forEach(platform => {
+          if (checkPlatformCollision(currentY, newY, platform)) {
+            petY.setValue(platform.y + platform.height);
+            setIsOnGround(true);
+            setJumpCount(0);
+            onPlatform = true;
+          }
+        });
+
+        if (!onPlatform && newY > GROUND_HEIGHT) {
+          setIsOnGround(false);
+          petY.setValue(newY);
+        }
+
+        return newVelocity;
+      });
+    }
+  };
+
+  const checkPlatformCollision = (oldY, newY, platform) => {
+    const petX = 60;
+    const petRight = petX + PET_SIZE;
+    const platformLeft = platform.x;
+    const platformRight = platform.x + platform.width;
+    const horizontalOverlap = petRight > platformLeft && petX < platformRight;
+    const verticalOverlap = oldY > platform.y && newY <= platform.y + platform.height;
+
+    return horizontalOverlap && verticalOverlap && velocityY > 0;
+  };
+
+  const updateGameObjects = (deltaTime) => {
+    const moveDistance = speed * deltaTime;
+
+    setObstacles(prev => {
+      const updated = prev.map(obs => ({
+        ...obs,
+        x: obs.x - moveDistance,
+      })).filter(obs => obs.x > -100);
+
+      updated.forEach(obs => {
+        if (checkObstacleCollision(obs)) {
+          if (canDestroyObstacles && obs.destroyable) {
+            obs.x = -200;
+            setScore(s => s + 20);
+          } else if (canFireBreath && obs.destroyable) {
+            obs.x = -200;
+            setScore(s => s + 25);
+          } else {
+            handleHit();
+          }
+        }
+      });
+
+      return updated.filter(o => o.x > -200);
+    });
+
+    setPlatforms(prev => prev.map(p => ({
+      ...p,
+      x: p.x - moveDistance,
+    })).filter(p => p.x > -150));
+
+    setCoinsList(prev => {
+      const updated = prev.map(coin => ({
+        ...coin,
+        x: coin.x - moveDistance,
+      })).filter(coin => coin.x > -30);
+
+      updated.forEach(coin => {
+        if (!coin.collected && checkCoinCollision(coin)) {
+          coin.collected = true;
+          setCoins(c => c + 1);
+          setScore(s => s + 10);
+        }
+      });
+
+      return updated.filter(c => !c.collected);
+    });
+  };
+
+  const checkObstacleCollision = (obstacle) => {
+    const petX = 60;
+    const petBottom = petY._value;
+    const petTop = petBottom + PET_SIZE;
+    const petRight = petX + PET_SIZE;
+    const obsLeft = obstacle.x;
+    const obsRight = obstacle.x + obstacle.width;
+    const obsBottom = obstacle.y;
+    const obsTop = obstacle.y + obstacle.height;
+
+    return (
+      petRight > obsLeft + 10 &&
+      petX < obsRight - 10 &&
+      petTop > obsBottom + 5 &&
+      petBottom < obsTop - 5
+    );
+  };
+
+  const checkCoinCollision = (coin) => {
+    const petX = 60;
+    const petCenter = petY._value + PET_SIZE / 2;
+    const distance = Math.sqrt(
+      Math.pow(petX + PET_SIZE / 2 - coin.x, 2) +
+      Math.pow(petCenter - coin.y, 2)
+    );
+
+    return distance < 35;
+  };
+
+  const handleHit = () => {
+    if (hasExtraLife) {
+      setHasExtraLife(false);
+      Alert.alert('💚 Extra Life Used!', 'Careful now!');
+    } else if (canResurrect && !resurrected) {
+      setResurrected(true);
+      setScore(s => s + 100);
+      Alert.alert('🔥 Phoenix Rebirth!', 'You rise from the ashes!');
+    } else {
+      endGame();
+    }
   };
 
   const jump = () => {
-    if (isJumping || gameState !== 'playing') return;
+    if (gameState !== 'playing') return;
+    
+    if (isFlying) {
+      setVelocityY(FLYING_FLAP_FORCE);
+      
+      Animated.sequence([
+        Animated.timing(petFlap, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(petFlap, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      const canJump = isOnGround || jumpCount < maxJumps;
 
-    setIsJumping(true);
-    Animated.sequence([
-      Animated.timing(petY, {
-        toValue: GROUND_HEIGHT + JUMP_HEIGHT,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(petY, {
-        toValue: GROUND_HEIGHT,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => setIsJumping(false));
-  };
-
-  const checkCollision = (currentObstacles) => {
-    if (isJumping) return;
-
-    const petLeft = 50;
-    const petRight = petLeft + PET_SIZE;
-    const petBottom = GROUND_HEIGHT;
-    const petTop = GROUND_HEIGHT + PET_SIZE;
-
-    for (const obs of currentObstacles) {
-      if (obs.x < petRight && obs.x + OBSTACLE_WIDTH > petLeft) {
-        const obsHeight = obs.type === 'tall' ? OBSTACLE_HEIGHT + 20 : OBSTACLE_HEIGHT;
-        const obsTop = GROUND_HEIGHT + obsHeight;
+      if (canJump) {
+        const agility = pet?.stats?.agility || 50;
+        const agilityBonus = Math.min((agility - 50) * 2, 100);
+        const jumpPower = LAND_JUMP_VELOCITY - agilityBonus;
         
-        if (petBottom < obsTop) {
-          endGame();
-          return;
+        setVelocityY(jumpPower);
+        setIsOnGround(false);
+        setJumpCount(prev => prev + 1);
+
+        if (hasSpeedBoost) {
+          setSpeed(prev => Math.min(prev * 1.3, 600));
+          if (speedBoostTimer) clearTimeout(speedBoostTimer);
+          const timer = setTimeout(() => {
+            setSpeed(INITIAL_SPEED);
+          }, 1500);
+          setSpeedBoostTimer(timer);
         }
+
+        Animated.timing(petRotation, {
+          toValue: petRotation._value + 360,
+          duration: 500,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }).start();
       }
     }
   };
 
   const endGame = async () => {
-    stopGame();
     setGameState('gameOver');
+    if (gameLoop.current) cancelAnimationFrame(gameLoop.current);
+    if (spawnTimer.current) clearInterval(spawnTimer.current);
+
+    const finalScore = Math.floor(score);
+    const finalCoins = coins;
 
     try {
-      const battleStats = await getBattleStats();
+      const battleStats = await getBattleStats() || {};
       const currentStats = battleStats.runner || { highScore: 0, totalRuns: 0, todayGems: 0 };
-      
+
       currentStats.todayGems = currentStats.todayGems ?? currentStats.dailyGems ?? 0;
-      
+
       const DAILY_GEM_LIMIT = 50;
       const isAtDailyLimit = currentStats.todayGems >= DAILY_GEM_LIMIT;
-      
-      let gemsEarned = calculateRunnerReward(score);
-      
+
+      let gemsEarned = calculateRunnerReward(finalScore);
+
       if (isAtDailyLimit) {
         gemsEarned = 0;
       } else if (currentStats.todayGems + gemsEarned > DAILY_GEM_LIMIT) {
         gemsEarned = DAILY_GEM_LIMIT - currentStats.todayGems;
       }
-      
-      const xpEarned = Math.min(Math.floor(score / 2), 100);
-      
-      await addGems(gemsEarned);
-      await addXP(xpEarned);
+
+      const xpEarned = Math.min(Math.floor(finalScore / 2), 100);
+
+      if (gemsEarned > 0) {
+        await addGems(gemsEarned);
+      }
+      if (xpEarned > 0) {
+        await addXP(xpEarned);
+      }
 
       const newStats = {
-        highScore: Math.max(currentStats.highScore, score),
+        highScore: Math.max(currentStats.highScore, finalScore),
         totalRuns: (currentStats.totalRuns || 0) + 1,
         todayGems: currentStats.todayGems + gemsEarned,
       };
 
       battleStats.runner = newStats;
       await saveBattleStats(battleStats);
-      setRunnerStats(newStats);
 
-      const isNewRecord = score > currentStats.highScore;
+      const isNewHighScore = finalScore > currentStats.highScore;
 
-      Alert.alert(
-        'Game Over!',
-        `${isNewRecord ? '🎉 NEW RECORD! 🎉\n\n' : ''}Score: ${score}\n\n💎 Gems Earned: ${gemsEarned}${isAtDailyLimit ? ' (Daily limit reached)' : ''}\n⭐ XP Earned: ${xpEarned}\n${isNewRecord ? '' : `🏆 High Score: ${currentStats.highScore}`}\n\n📊 Today's Gems: ${newStats.todayGems}/${DAILY_GEM_LIMIT}`,
-        [
-          { text: 'Menu', onPress: () => setGameState('menu') },
-          { text: 'Play Again', onPress: () => handleStartGame() }
-        ]
-      );
+      let message = `Score: ${finalScore}\nCoins: ${finalCoins}\nDistance: ${Math.floor(distance)}m\n\n`;
+      if (isAtDailyLimit) {
+        message += `⚠️ Daily limit (50/50)\n\nCome back tomorrow!`;
+      } else {
+        message += `💎 Gems: ${gemsEarned}\n`;
+        message += `⭐ XP: ${xpEarned}\n`;
+        message += `Daily: ${newStats.todayGems}/50\n\n`;
+
+        if (isNewHighScore) {
+          message += `🎉 NEW HIGH SCORE!`;
+        }
+      }
+
+      Alert.alert('Game Over!', message, [
+        { text: 'Menu', onPress: () => navigation.goBack() },
+        { text: 'Again', onPress: () => {
+          loadGameData();
+          setGameState('ready');
+        }},
+      ]);
     } catch (error) {
       console.error('Error ending game:', error);
-      setGameState('menu');
+      Alert.alert('Error', 'Failed to save game results');
     }
   };
 
-  if (!pet) {
+  if (!petConfig || !pet) {
     return (
-      <View style={styles.loading}>
+      <View style={styles.container}>
         <Text>Loading...</Text>
       </View>
     );
   }
 
-  if (gameState === 'playing' || gameState === 'gameOver') {
+  if (gameState === 'ready') {
     return (
-      <View style={styles.gameContainer}>
-        <View style={styles.gameHeader}>
-          <Text style={styles.scoreText}>Score: {score}</Text>
-          <TouchableOpacity onPress={() => { stopGame(); setGameState('menu'); }} style={styles.quitButton}>
-            <Text style={styles.quitText}>Quit</Text>
-          </TouchableOpacity>
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>
+            {petConfig.emoji || petConfig.icon} {petConfig.name}'s Adventure
+          </Text>
+          <Text style={styles.subtitle}>
+            {isFlying ? 'Fly through the skies!' : 'Run and jump!'}
+          </Text>
+        </View>
+        
+        <View style={styles.abilityCard}>
+          <Text style={styles.abilityTitle}>
+            ✨ Special Ability: {petConfig.runnerAbility?.name || 'None'}
+          </Text>
+          <Text style={styles.abilityDesc}>
+            {petConfig.runnerAbility?.description || 'No special ability'}
+          </Text>
         </View>
 
-        <TouchableOpacity 
-          style={styles.gameArea} 
-          onPress={jump}
-          activeOpacity={1}
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>How to Play</Text>
+          <Text style={styles.infoText}>
+            {isFlying ? '🎮 Tap to flap wings and fly higher' : '🎮 Tap to jump over obstacles'}
+          </Text>
+          <Text style={styles.infoText}>💎 Collect coins for points</Text>
+          <Text style={styles.infoText}>⭐ Grab power-ups</Text>
+          <Text style={styles.infoText}>🏆 Survive as long as possible</Text>
+        </View>
+
+        <View style={styles.statsCard}>
+          <View style={styles.statRow}>
+            <Text style={styles.statLabel}>🏆 High Score</Text>
+            <Text style={styles.statValue}>{highScore}</Text>
+          </View>
+          <View style={styles.statRow}>
+            <Text style={styles.statLabel}>💎 Today</Text>
+            <Text style={styles.statValue}>{dailyGems}/50</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.startBtn, !hasEnoughEnergy(5) && styles.startBtnDisabled]}
+          onPress={startGame}
+          disabled={!hasEnoughEnergy(5)}
         >
-          <View style={styles.skyArea}>
-            <Text style={styles.instructionText}>Tap to Jump!</Text>
-          </View>
-
-          <Animated.View
-            style={[
-              styles.pet,
-              {
-                transform: [{ translateY: petY.interpolate({
-                  inputRange: [0, 300],
-                  outputRange: [0, -300],
-                  extrapolate: 'clamp'
-                })}]
-              }
-            ]}
-          >
-            <Text style={styles.petCharacter}>🐾</Text>
-          </Animated.View>
-
-          {obstacles.map(obs => (
-            <View
-              key={obs.id}
-              style={[
-                styles.obstacle,
-                {
-                  left: obs.x,
-                  height: obs.type === 'tall' ? OBSTACLE_HEIGHT + 20 : OBSTACLE_HEIGHT,
-                }
-              ]}
-            >
-              <Text style={styles.obstacleText}>{obs.type === 'tall' ? '🌵' : '🪨'}</Text>
-            </View>
-          ))}
-
-          <View style={styles.ground}>
-            <Text style={styles.groundPattern}>{'─'.repeat(100)}</Text>
-          </View>
+          <Text style={styles.startBtnText}>
+            {!hasEnoughEnergy(5) ? 'Need 5 Energy' : '▶️ Start Adventure'}
+          </Text>
         </TouchableOpacity>
-      </View>
+
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backBtnText}>← Back</Text>
+        </TouchableOpacity>
+      </ScrollView>
     );
   }
 
+  const rotation = petRotation.interpolate({
+    inputRange: [0, 360],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const flapScale = petFlap.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0.9],
+  });
+
+  const currentIcon = isFlying ?
+    (velocityY < 0 ? (petConfig.flyingIcon || petConfig.emoji) : (petConfig.glidingIcon || petConfig.emoji)) :
+    (isOnGround ? (petConfig.runningIcon || petConfig.emoji) : (petConfig.jumpingIcon || petConfig.emoji));
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Card style={styles.headerCard}>
-          <Card.Content>
-            <View style={styles.header}>
-              <MaterialCommunityIcons name="run-fast" size={48} color="#A463BF" />
-              <Title style={styles.title}>Pet Runner</Title>
-            </View>
-            <Text style={styles.subtitle}>Endless obstacle course challenge</Text>
-          </Card.Content>
-        </Card>
-
-        <Card style={styles.infoCard}>
-          <Card.Content>
-            <View style={styles.infoRow}>
-              <MaterialCommunityIcons name="lightning-bolt" size={20} color={COLORS.WARNING} />
-              <Text style={styles.infoText}>Energy: {energy}/{maxEnergy}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <MaterialCommunityIcons name="flash" size={20} color={COLORS.ERROR} />
-              <Text style={styles.infoText}>Cost: {ENERGY_COST} energy per run</Text>
-            </View>
-          </Card.Content>
-        </Card>
-
-        <Card style={styles.rewardCard}>
-          <Card.Content>
-            <Text style={styles.rewardTitle}>💎 Gem Rewards</Text>
-            <View style={styles.rewardRow}>
-              <Text style={styles.rewardText}>0-49 points: 5 gems</Text>
-            </View>
-            <View style={styles.rewardRow}>
-              <Text style={styles.rewardText}>50-99 points: 8 gems</Text>
-            </View>
-            <View style={styles.rewardRow}>
-              <Text style={styles.rewardText}>100-199 points: 12 gems</Text>
-            </View>
-            <View style={styles.rewardRow}>
-              <Text style={styles.rewardText}>200-299 points: 15 gems</Text>
-            </View>
-            <View style={styles.rewardRow}>
-              <Text style={styles.rewardText}>300-499 points: 20 gems</Text>
-            </View>
-            <View style={styles.rewardRow}>
-              <Text style={styles.rewardText}>500+ points: 25 gems</Text>
-            </View>
-          </Card.Content>
-        </Card>
-
-        <Card style={styles.gamePreviewCard}>
-          <Card.Content>
-            <Text style={styles.previewTitle}>How to Play</Text>
-            <View style={styles.instructionRow}>
-              <Text style={styles.instructionIcon}>🏃</Text>
-              <Text style={styles.instructionTextMenu}>
-                Your pet runs automatically through an endless course
-              </Text>
-            </View>
-            <View style={styles.instructionRow}>
-              <Text style={styles.instructionIcon}>⬆️</Text>
-              <Text style={styles.instructionTextMenu}>
-                Tap to jump over obstacles
-              </Text>
-            </View>
-            <View style={styles.instructionRow}>
-              <Text style={styles.instructionIcon}>🪨</Text>
-              <Text style={styles.instructionTextMenu}>
-                Avoid rocks and cacti
-              </Text>
-            </View>
-            <View style={styles.instructionRow}>
-              <Text style={styles.instructionIcon}>⚡</Text>
-              <Text style={styles.instructionTextMenu}>
-                Game speeds up as you progress
-              </Text>
-            </View>
-          </Card.Content>
-        </Card>
-
-        <Card style={styles.statsCard}>
-          <Card.Content>
-            <Text style={styles.statsTitle}>Your Stats</Text>
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>High Score:</Text>
-              <Text style={styles.statValue}>{runnerStats.highScore}</Text>
-            </View>
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Today's Gems:</Text>
-              <Text style={styles.statValue}>{runnerStats.todayGems}/50</Text>
-            </View>
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Total Runs:</Text>
-              <Text style={styles.statValue}>{runnerStats.totalRuns}</Text>
-            </View>
-          </Card.Content>
-        </Card>
-
-        <Button
-          mode="contained"
-          onPress={handleStartGame}
-          disabled={!hasEnoughEnergy(ENERGY_COST)}
-          icon="play"
-          style={styles.playButton}
-          contentStyle={styles.buttonContent}
-          labelStyle={styles.buttonLabel}
-        >
-          {hasEnoughEnergy(ENERGY_COST) ? `🏃 Start Running! (${ENERGY_COST}⚡)` : `Need ${ENERGY_COST - energy} More Energy`}
-        </Button>
+    <TouchableOpacity style={styles.gameContainer} activeOpacity={1} onPress={jump}>
+      <View style={styles.hud}>
+        <Text style={styles.hudText}>Score: {Math.floor(score)}</Text>
+        <Text style={styles.hudText}>💎 {coins}</Text>
+        <Text style={styles.hudText}>{Math.floor(distance)}m</Text>
       </View>
 
-      <Snackbar
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        duration={3000}
-      >
-        {snackbarMessage}
-      </Snackbar>
-    </ScrollView>
+      {hasExtraLife && (
+        <View style={[styles.abilityIndicator, { top: 80 }]}>
+          <Text style={styles.abilityText}>💚 Extra Life</Text>
+        </View>
+      )}
+      {resurrected && (
+        <View style={[styles.abilityIndicator, { top: 80 }]}>
+          <Text style={styles.abilityText}>🔥 Reborn</Text>
+        </View>
+      )}
+      {speedBoostTimer && (
+        <View style={[styles.abilityIndicator, { top: 120 }]}>
+          <Text style={styles.abilityText}>⚡ Speed Boost</Text>
+        </View>
+      )}
+
+      <View style={[styles.gameArea, { height: GAME_HEIGHT }]}>
+        <View style={styles.sky} />
+
+        {!isFlying && platforms.map(platform => (
+          <View
+            key={platform.id}
+            style={[
+              styles.platform,
+              {
+                left: platform.x,
+                bottom: platform.y - GROUND_HEIGHT,
+                width: platform.width,
+                height: platform.height,
+              },
+            ]}
+          />
+        ))}
+
+        {coinsList.map(coin => (
+          <Text
+            key={coin.id}
+            style={[
+              styles.coin,
+              {
+                left: coin.x,
+                bottom: coin.y - GROUND_HEIGHT,
+              },
+            ]}
+          >
+            💎
+          </Text>
+        ))}
+
+        {obstacles.map(obs => (
+          <View
+            key={obs.id}
+            style={[
+              styles.obstacle,
+              {
+                left: obs.x,
+                bottom: obs.y - GROUND_HEIGHT,
+                width: obs.width,
+                height: obs.height,
+              },
+            ]}
+          >
+            <Text style={styles.obstacleIcon}>{obs.icon}</Text>
+          </View>
+        ))}
+
+        <Animated.View
+          style={[
+            styles.pet,
+            {
+              bottom: Animated.subtract(petY, GROUND_HEIGHT),
+              transform: isFlying ? 
+                [{ scale: flapScale }] : 
+                [{ rotate: rotation }],
+            },
+          ]}
+        >
+          <Text style={styles.petIcon}>{currentIcon}</Text>
+        </Animated.View>
+
+        <View style={styles.ground}>
+          <View style={styles.groundPattern} />
+        </View>
+      </View>
+
+      <View style={styles.instructions}>
+        <Text style={styles.instructionText}>
+          {isFlying ? '👆 TAP TO FLAP' : '👆 TAP TO JUMP'}
+        </Text>
+        {maxJumps > 1 && !isFlying && (
+          <Text style={styles.instructionSubtext}>
+            {maxJumps} jumps available!
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.SECONDARY,
-  },
-  content: {
-    padding: 16,
-  },
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerCard: {
-    marginBottom: 16,
-    elevation: 3,
-    borderRadius: 12,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
   },
   header: {
+    backgroundColor: '#A463BF',
+    padding: 30,
     alignItems: 'center',
-    marginBottom: 8,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
-    color: '#A463BF',
-    marginTop: 8,
+    color: 'white',
+    marginBottom: 5,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.TEXT_SECONDARY,
-    textAlign: 'center',
+    color: 'rgba(255,255,255,0.9)',
+  },
+  abilityCard: {
+    backgroundColor: '#FFE082',
+    margin: 20,
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FFA000',
+  },
+  abilityTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#F57C00',
+    marginBottom: 5,
+  },
+  abilityDesc: {
+    fontSize: 14,
+    color: '#666',
   },
   infoCard: {
-    marginBottom: 16,
-    elevation: 2,
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 20,
     borderRadius: 12,
-    backgroundColor: '#fff',
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 4,
+  infoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#333',
   },
   infoText: {
     fontSize: 14,
-    color: COLORS.TEXT_PRIMARY,
-    marginLeft: 8,
-    fontWeight: '600',
-  },
-  rewardCard: {
-    marginBottom: 16,
-    elevation: 2,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-  },
-  rewardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#A463BF',
-    marginBottom: 12,
-  },
-  rewardRow: {
-    paddingVertical: 4,
-  },
-  rewardText: {
-    fontSize: 13,
-    color: COLORS.TEXT_PRIMARY,
-  },
-  gamePreviewCard: {
-    marginBottom: 16,
-    elevation: 3,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-  },
-  previewTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#A463BF',
-    marginBottom: 12,
-  },
-  instructionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  instructionIcon: {
-    fontSize: 24,
-    marginRight: 12,
-    width: 32,
-  },
-  instructionTextMenu: {
-    fontSize: 14,
-    color: COLORS.TEXT_PRIMARY,
-    flex: 1,
+    color: '#666',
+    marginBottom: 6,
   },
   statsCard: {
-    marginBottom: 24,
-    elevation: 2,
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 15,
     borderRadius: 12,
-    backgroundColor: '#fff',
-  },
-  statsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#A463BF',
-    marginBottom: 12,
   },
   statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 6,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingVertical: 10,
   },
   statLabel: {
     fontSize: 14,
-    color: COLORS.TEXT_SECONDARY,
+    color: '#666',
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#A463BF',
   },
-  playButton: {
+  startBtn: {
     backgroundColor: '#A463BF',
+    marginHorizontal: 20,
+    marginBottom: 15,
+    padding: 18,
     borderRadius: 12,
-    elevation: 4,
-    marginBottom: 24,
+    alignItems: 'center',
   },
-  buttonContent: {
-    paddingVertical: 8,
+  startBtnDisabled: {
+    backgroundColor: '#CCC',
   },
-  buttonLabel: {
+  startBtnText: {
+    color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  backBtn: {
+    marginHorizontal: 20,
+    marginBottom: 30,
+    padding: 15,
+    alignItems: 'center',
+  },
+  backBtnText: {
+    color: '#A463BF',
+    fontSize: 16,
   },
   gameContainer: {
     flex: 1,
     backgroundColor: '#87CEEB',
   },
-  gameHeader: {
+  hud: {
+    position: 'absolute',
+    top: 40,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#1A1A2E',
+    justifyContent: 'space-around',
+    zIndex: 10,
   },
-  scoreText: {
-    fontSize: 24,
+  hudText: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: 'white',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
-  quitButton: {
-    padding: 8,
-    backgroundColor: COLORS.ERROR,
-    borderRadius: 8,
+  abilityIndicator: {
+    position: 'absolute',
+    top: 80,
+    left: 20,
+    backgroundColor: 'rgba(255,215,0,0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+    zIndex: 10,
   },
-  quitText: {
-    color: '#FFFFFF',
+  abilityText: {
+    fontSize: 12,
     fontWeight: 'bold',
+    color: '#333',
   },
   gameArea: {
-    flex: 1,
+    width: '100%',
     position: 'relative',
+    marginTop: 120,
   },
-  skyArea: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  instructionText: {
-    fontSize: 20,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    textShadowColor: '#000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+  sky: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: GROUND_HEIGHT,
+    backgroundColor: '#87CEEB',
   },
   ground: {
     position: 'absolute',
@@ -578,34 +927,60 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: GROUND_HEIGHT,
-    backgroundColor: '#8B4513',
-    justifyContent: 'flex-start',
-    paddingTop: 5,
+    backgroundColor: '#8B7355',
   },
   groundPattern: {
-    fontSize: 16,
-    color: '#654321',
+    height: 3,
+    backgroundColor: '#654321',
   },
   pet: {
     position: 'absolute',
-    bottom: GROUND_HEIGHT,
-    left: 50,
+    left: 60,
     width: PET_SIZE,
     height: PET_SIZE,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  petCharacter: {
-    fontSize: 40,
+  petIcon: {
+    fontSize: 45,
+  },
+  platform: {
+    position: 'absolute',
+    backgroundColor: '#8B4513',
+    borderRadius: 5,
+    borderTopWidth: 3,
+    borderTopColor: '#A0522D',
+  },
+  coin: {
+    position: 'absolute',
+    fontSize: 25,
   },
   obstacle: {
     position: 'absolute',
-    bottom: GROUND_HEIGHT,
-    width: OBSTACLE_WIDTH,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  obstacleText: {
+  obstacleIcon: {
     fontSize: 40,
+  },
+  instructions: {
+    position: 'absolute',
+    bottom: 30,
+    width: '100%',
+    alignItems: 'center',
+  },
+  instructionText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: 'white',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  },
+  instructionSubtext: {
+    fontSize: 14,
+    color: '#FFD700',
+    fontWeight: 'bold',
+    marginTop: 5,
   },
 });
