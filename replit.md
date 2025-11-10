@@ -3,18 +3,22 @@
 ## Overview
 PetFit Champions is a gamified health tracking mobile app built with React Native and Expo. Users track daily health activities to earn XP, level up virtual pets, and prepare them for future PvP battles. This is the Phase 1 MVP implementation.
 
-## Current Status (Phase 1 MVP - Completed)
+## Current Status (Phase 3 MVP - Completed)
 The app includes:
 - **Authentication**: Email/password signup and login with persistent sessions
 - **Pet Selection**: Choose from 4 unique starter pets with distinct stat specializations
-- **Home Dashboard**: Displays username, pet info, XP progress, daily activity summary
+- **Home Dashboard**: Displays username, pet info, XP progress, daily activity summary, energy, and quick battle access
 - **Health Tracking**: Manual inputs for 8 health activities (steps, sleep, mood, water, meditation, meals, journal, breathing)
 - **XP System**: Automatic XP calculation based on tracked activities with configurable conversion rates
 - **Pet System**: 4 starter pets with 7 stats, level progression, and evolution system
 - **Leveling**: Automatic level-up system (1-50) with gem rewards and +2 stat growth per level
 - **Evolution**: 3-tier evolution system (Tier 1→2 at level 16, Tier 2→3 at level 36) with 50% stat boosts
-- **Navigation**: Bottom tab navigation between Home, Track, Pet, and Profile screens
-- **Data Persistence**: Local storage using AsyncStorage for user, pet, and health data
+- **Battle System**: Turn-based PvP battles with AI opponents, 3 actions (Attack/Defend/Special), energy management
+- **Energy System**: 100 max energy, 20 cost per battle, regenerates 1 energy per minute
+- **Battle Rewards**: +15 gems for victory, -5 gems for defeat
+- **Navigation**: Bottom tab navigation with Battle tab, locked battle screens prevent mid-battle exits
+- **Data Persistence**: Local storage using AsyncStorage for user, pet, health, energy, and gems data
+- **Visual Assets**: App icon and 12 pet evolution illustrations (4 pets × 3 tiers)
 
 ## Project Structure
 ```
@@ -26,15 +30,20 @@ PetFitChampions/
 │   │   ├── PetSelectionScreen.js
 │   │   ├── HomeScreen.js
 │   │   ├── TrackScreen.js
+│   │   ├── BattleMatchmakingScreen.js
+│   │   ├── BattleScreen.js
+│   │   ├── BattleResultScreen.js
 │   │   ├── PetScreen.js
 │   │   └── ProfileScreen.js
 │   ├── components/       # Reusable UI components
 │   ├── context/          # State management
 │   │   ├── AuthContext.js
 │   │   ├── PetContext.js
+│   │   ├── BattleContext.js
 │   │   └── HealthContext.js
 │   ├── utils/            # Utility functions
 │   │   ├── xpCalculations.js
+│   │   ├── battleLogic.js
 │   │   └── storage.js
 │   ├── data/             # Constants and templates
 │   │   ├── constants.js
@@ -100,21 +109,45 @@ Users choose one of 4 unique pets at signup:
 ## Running the App
 The app runs on port 5000 with Expo web. Use the webview to interact with the app in your browser.
 
-## Next Phase Features (Phase 2)
-- Add all 4 starter pets (Vigor, Zen, Atlas, Swift)
-- Pet selection screen
-- 3-tier evolution system
-- Enhanced gem economy
-- Daily streak tracker
+## Battle System
+- **Energy Cost**: 20 energy per battle
+- **Max Energy**: 100
+- **Regen Rate**: 1 energy per minute
+- **Victory Reward**: +15 gems
+- **Defeat Penalty**: -5 gems (max)
+- **Actions**: Attack (basic damage), Defend (50% damage reduction), Special (high damage using energy stat)
+- **AI Opponents**: Level-scaled, randomized stats, intelligent action selection
+- **Battle Flow**: Matchmaking → Battle (locked, no back navigation) → Result screen
 
-## Phase 3 Features
-- Turn-based PvP battle system
-- Battle matchmaking
-- Energy system with regeneration
-- Battle history tracking
-- Gem stealing mechanics
+## Color Scheme
+- **Primary (Teal)**: #32808D - Main brand color for buttons, headers, important text
+- **Secondary (Gray)**: #F5F5F5 - Background color for screens and cards
+- **Accent (Light Teal)**: #5EB8C6 - Secondary actions, highlights
+- **Success (Green)**: #43a047 - Positive feedback, health bars
+- **Error (Red)**: #d32f2f - Damage, errors, warnings
+- **Warning (Orange)**: #ff9800 - Energy, gems, special items
+
+## Future Enhancements
+- Daily streak tracker with bonus rewards
+- Battle history and statistics
+- Ranked matchmaking with leaderboards
+- Pet abilities and special moves
+- Social features (friend battles, guilds)
 
 ## Recent Changes
+- **November 10, 2025 (Update 4)**: Battle System & Visual Assets
+  - Complete turn-based battle system with AI opponents
+  - Energy management: 100 max, 20 per battle, 1/min regeneration
+  - Battle screens: Matchmaking, Battle (with animations), Result
+  - Locked battle navigation (no back button or gestures during battle)
+  - Gem rewards: +15 for victory, -5 for defeat
+  - Damage calculation using pet stats (attack, strength, energy, defense)
+  - AI opponent generation with level-based scaling
+  - Generated app icon (1024x1024) with pet health theme
+  - Generated 12 pet evolution illustrations (4 pets × 3 tiers, 512x512 each)
+  - Applied new color scheme (#32808D teal, #F5F5F5 gray, #5EB8C6 accent)
+  - Updated HomeScreen with energy display and Battle button
+
 - **November 10, 2025 (Update 3)**: Complete Pet System implementation
   - Pet Selection Screen: Choose from 4 unique starter pets (Vigor, Zen, Atlas, Swift)
   - Each pet has distinct stat specializations and descriptions

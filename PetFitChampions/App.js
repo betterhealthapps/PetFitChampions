@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Provider as PaperProvider } from 'react-native-paper';
@@ -109,7 +109,14 @@ function MainTabs() {
       <Tab.Screen 
         name="Battle" 
         component={BattleStack}
-        options={{ headerShown: false }}
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route) ?? 'BattleMatchmaking';
+          const hideTabBar = routeName === 'Battle' || routeName === 'BattleResult';
+          return {
+            headerShown: false,
+            tabBarStyle: hideTabBar ? { display: 'none' } : undefined,
+          };
+        }}
       />
       <Tab.Screen 
         name="Pet" 

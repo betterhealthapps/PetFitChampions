@@ -1,14 +1,18 @@
 import React, { useContext } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Card, Title, Text, Button, ProgressBar } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { PetContext } from '../context/PetContext';
 import { HealthContext } from '../context/HealthContext';
+import { BattleContext } from '../context/BattleContext';
+import { COLORS } from '../data/constants';
 
 export default function HomeScreen({ navigation }) {
   const { user } = useContext(AuthContext);
   const { pet, gems, getLevelProgress } = useContext(PetContext);
   const { getTodayActivityCount, getTodayXP } = useContext(HealthContext);
+  const { energy, maxEnergy } = useContext(BattleContext);
 
   if (!user || !pet) {
     return <View style={styles.container}><Text>Loading...</Text></View>;
@@ -17,6 +21,7 @@ export default function HomeScreen({ navigation }) {
   const levelProgress = getLevelProgress();
   const activityCount = getTodayActivityCount();
   const todayXP = getTodayXP();
+  const energyPercent = (energy / maxEnergy) * 100;
 
   return (
     <ScrollView style={styles.container}>
@@ -27,11 +32,20 @@ export default function HomeScreen({ navigation }) {
         <Card style={styles.card}>
           <Card.Content>
             <View style={styles.petHeader}>
-              <Text style={styles.petEmoji}>{pet.emoji}</Text>
+              <MaterialCommunityIcons name="paw" size={64} color={COLORS.PRIMARY} />
               <View style={styles.petInfo}>
-                <Title>{pet.name}</Title>
-                <Text>Level {pet.level} {pet.type}</Text>
-                <Text style={styles.gems}>💎 {gems} Gems</Text>
+                <Title style={styles.petName}>{pet.name}</Title>
+                <Text style={styles.petType}>Level {pet.level} • Tier {pet.tier || 1}</Text>
+                <View style={styles.resourceRow}>
+                  <View style={styles.resource}>
+                    <MaterialCommunityIcons name="diamond-stone" size={16} color={COLORS.WARNING} />
+                    <Text style={styles.resourceText}>{gems}</Text>
+                  </View>
+                  <View style={styles.resource}>
+                    <MaterialCommunityIcons name="lightning-bolt" size={16} color={COLORS.WARNING} />
+                    <Text style={styles.resourceText}>{energy}/{maxEnergy}</Text>
+                  </View>
+                </View>
               </View>
             </View>
           </Card.Content>
@@ -47,7 +61,7 @@ export default function HomeScreen({ navigation }) {
             </View>
             <ProgressBar 
               progress={levelProgress.percentage / 100} 
-              color="#6200ee"
+              color={COLORS.PRIMARY}
               style={styles.progressBar}
             />
           </Card.Content>
@@ -68,14 +82,24 @@ export default function HomeScreen({ navigation }) {
               </View>
             </View>
             
-            <Button 
-              mode="contained" 
-              onPress={() => navigation.navigate('Track')}
-              style={styles.trackButton}
-              icon="plus"
-            >
-              Track Activity
-            </Button>
+            <View style={styles.buttonRow}>
+              <Button 
+                mode="contained" 
+                onPress={() => navigation.navigate('Track')}
+                style={styles.actionButton}
+                icon="plus"
+              >
+                Track Activity
+              </Button>
+              <Button 
+                mode="outlined" 
+                onPress={() => navigation.navigate('Battle')}
+                style={styles.actionButton}
+                icon="sword-cross"
+              >
+                Battle
+              </Button>
+            </View>
           </Card.Content>
         </Card>
 
@@ -96,38 +120,60 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.SECONDARY,
   },
   content: {
     padding: 16,
   },
   welcome: {
-    fontSize: 24,
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: COLORS.TEXT_PRIMARY,
     marginBottom: 16,
   },
   card: {
     marginBottom: 16,
+    elevation: 3,
+    borderRadius: 12,
+    backgroundColor: '#fff',
   },
   petHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  petEmoji: {
-    fontSize: 60,
-    marginRight: 16,
-  },
   petInfo: {
     flex: 1,
+    marginLeft: 16,
   },
-  gems: {
-    marginTop: 4,
-    fontSize: 16,
-    color: '#6200ee',
+  petName: {
+    fontSize: 22,
     fontWeight: 'bold',
+    color: COLORS.PRIMARY,
+    marginBottom: 4,
+  },
+  petType: {
+    fontSize: 14,
+    color: COLORS.TEXT_SECONDARY,
+    marginBottom: 8,
+  },
+  resourceRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  resource: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  resourceText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.TEXT_PRIMARY,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: COLORS.PRIMARY,
     marginBottom: 12,
   },
   progressInfo: {
@@ -136,13 +182,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressBar: {
-    height: 10,
-    borderRadius: 5,
+    height: 12,
+    borderRadius: 6,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 16,
+    padding: 16,
+    backgroundColor: COLORS.SECONDARY,
+    borderRadius: 12,
   },
   stat: {
     alignItems: 'center',
@@ -150,18 +199,24 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#6200ee',
+    color: COLORS.PRIMARY,
   },
   statLabel: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
   },
-  trackButton: {
-    marginTop: 8,
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
+  actionButton: {
+    flex: 1,
+    borderRadius: 8,
   },
   tipText: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#555',
+    color: COLORS.TEXT_PRIMARY,
   },
 });
