@@ -7,10 +7,11 @@ import {
   getOwnedItems, saveOwnedItems,
   getEquippedCosmetics, saveEquippedCosmetics,
   getLearnedTricks, saveLearnedTricks,
+  getLearnedTraits, saveLearnedTraits,
   getPetSlots, savePetSlots,
   getPet, savePet
 } from '../utils/storage';
-import { COSMETICS, STAT_BOOSTS, BATTLE_TRICKS, PET_SLOT_ITEM, RARITY_COLORS } from '../data/shopItems';
+import { COSMETICS, STAT_BOOSTS, BATTLE_TRICKS, BATTLE_TRAITS_SHOP, PET_SLOT_ITEM, RARITY_COLORS } from '../data/shopItems';
 
 export default function GemShopScreen({ navigation }) {
   const { currentPet, updatePet } = useContext(PetContext);
@@ -19,6 +20,7 @@ export default function GemShopScreen({ navigation }) {
   const [ownedItems, setOwnedItems] = useState([]);
   const [equippedItems, setEquippedItems] = useState({ hat: null, accessory: null, skin: null });
   const [learnedTricks, setLearnedTricks] = useState([]);
+  const [learnedTraits, setLearnedTraits] = useState([]);
   const [petSlots, setPetSlotsCount] = useState(1);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -32,12 +34,14 @@ export default function GemShopScreen({ navigation }) {
     const owned = await getOwnedItems();
     const equipped = await getEquippedCosmetics();
     const tricks = await getLearnedTricks();
+    const traits = await getLearnedTraits();
     const slots = await getPetSlots();
     
     setUserGems(gems);
     setOwnedItems(owned);
     setEquippedItems(equipped);
     setLearnedTricks(tricks);
+    setLearnedTraits(traits);
     setPetSlotsCount(slots);
   };
 
@@ -134,6 +138,28 @@ export default function GemShopScreen({ navigation }) {
     setLearnedTricks(newTricks);
 
     showMessage(`Learned ${trick.name}!`);
+  };
+
+  const purchaseTrait = async (trait) => {
+    if (userGems < trait.cost) {
+      showMessage(`Not enough gems! Need ${trait.cost - userGems} more.`);
+      return;
+    }
+
+    if (learnedTraits.includes(trait.id)) {
+      showMessage('You already own this trait!');
+      return;
+    }
+
+    const newGems = userGems - trait.cost;
+    await saveGems(newGems);
+    setUserGems(newGems);
+
+    const newTraits = [...learnedTraits, trait.id];
+    await saveLearnedTraits(newTraits);
+    setLearnedTraits(newTraits);
+
+    showMessage(`Unlocked ${trait.name}! It will activate when stat requirements are met.`);
   };
 
   const purchasePetSlot = async () => {
@@ -342,6 +368,55 @@ export default function GemShopScreen({ navigation }) {
     );
   };
 
+  const renderTraits = () => {
+    if (!currentPet) {
+      return (
+        <View style={styles.section}>
+          <Text style={styles.warningText}>Loading pet data...</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionDescription}>
+          Unlock passive abilities that activate when stat requirements are met in battle
+        </Text>
+        {BATTLE_TRAITS_SHOP.map(trait => {
+          const isOwned = learnedTraits.includes(trait.id);
+
+          return (
+            <View key={trait.id} style={styles.itemCard}>
+              <View style={styles.itemHeader}>
+                <Text style={styles.itemIcon}>{trait.icon}</Text>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{trait.name}</Text>
+                  <Text style={styles.trickDescription}>{trait.description}</Text>
+                  <Text style={styles.requirementText}>
+                    Activates when: {trait.requirement}
+                  </Text>
+                </View>
+                <View style={styles.itemActions}>
+                  <Text style={styles.itemCost}>{trait.cost} 💎</Text>
+                  {isOwned ? (
+                    <Text style={styles.learnedBadge}>Owned</Text>
+                  ) : (
+                    <TouchableOpacity 
+                      style={styles.buyButton}
+                      onPress={() => purchaseTrait(trait)}
+                    >
+                      <Text style={styles.buyButtonText}>Unlock</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
   const renderPetSlots = () => {
     const isMaxed = petSlots >= PET_SLOT_ITEM.maxSlots;
     
@@ -420,11 +495,19 @@ export default function GemShopScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
+          style={[styles.tab, activeTab === 'traits' && styles.activeTab]}
+          onPress={() => setActiveTab('traits')}
+        >
+          <Text style={[styles.tabText, activeTab === 'traits' && styles.activeTabText]}>
+            🎯 Traits
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
           style={[styles.tab, activeTab === 'slots' && styles.activeTab]}
           onPress={() => setActiveTab('slots')}
         >
           <Text style={[styles.tabText, activeTab === 'slots' && styles.activeTabText]}>
-            🐾 Pet Slots
+            🐾 Slots
           </Text>
         </TouchableOpacity>
       </View>
@@ -433,6 +516,7 @@ export default function GemShopScreen({ navigation }) {
         {activeTab === 'cosmetics' && renderCosmetics()}
         {activeTab === 'boosts' && renderStatBoosts()}
         {activeTab === 'tricks' && renderTricks()}
+        {activeTab === 'traits' && renderTraits()}
         {activeTab === 'slots' && renderPetSlots()}
       </ScrollView>
 
@@ -631,9 +715,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 4,
   },
+  sectionDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+  },
   trickDescription: {
     fontSize: 12,
     color: '#666',
+    marginTop: 4,
+  },
+  requirementText: {
+    fontSize: 11,
+    color: '#FF9800',
+    fontStyle: 'italic',
     marginTop: 4,
   },
   unlockLevel: {

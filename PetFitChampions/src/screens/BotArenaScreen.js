@@ -2,6 +2,7 @@ import React, { useContext, useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Animated, Alert } from 'react-native';
 import { Card, Title, Text, Button, Snackbar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { BattleContext } from '../context/BattleContext';
 import { PetContext } from '../context/PetContext';
 import { COLORS, BATTLE_ACTIONS } from '../data/constants';
@@ -14,7 +15,7 @@ import {
   calculateBotRewards,
   initializeBattleTraits,
 } from '../utils/battleLogic';
-import { saveBattleStats, getBattleStats } from '../utils/storage';
+import { saveBattleStats, getBattleStats, getLearnedTraits } from '../utils/storage';
 
 export default function BotArenaScreen({ navigation }) {
   const { energy, consumeEnergy, hasEnoughEnergy, maxEnergy } = useContext(BattleContext);
@@ -33,6 +34,7 @@ export default function BotArenaScreen({ navigation }) {
   const [botStats, setBotStats] = useState({ easy: { wins: 0, losses: 0 }, medium: { wins: 0, losses: 0 }, hard: { wins: 0, losses: 0 } });
   const [playerTraits, setPlayerTraits] = useState({});
   const [botTraits, setBotTraits] = useState({});
+  const [learnedTraits, setLearnedTraits] = useState([]);
 
   const playerShake = useRef(new Animated.Value(0)).current;
   const botShake = useRef(new Animated.Value(0)).current;
@@ -43,11 +45,22 @@ export default function BotArenaScreen({ navigation }) {
     loadBotStats();
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      loadLearnedTraits();
+    }, [])
+  );
+
   const loadBotStats = async () => {
     const battleStats = await getBattleStats();
     if (battleStats && battleStats.bot) {
       setBotStats(battleStats.bot);
     }
+  };
+
+  const loadLearnedTraits = async () => {
+    const traits = await getLearnedTraits();
+    setLearnedTraits(traits);
   };
 
   const addLog = (message) => {
@@ -81,7 +94,7 @@ export default function BotArenaScreen({ navigation }) {
       setBotHealth(botMaxHealth);
       setBattleLog([`Battle started against ${bot.name} (${selectedDifficulty})!`]);
 
-      const traits = initializeBattleTraits(pet, bot);
+      const traits = initializeBattleTraits(pet, bot, learnedTraits, []);
       setPlayerTraits(traits.playerTraits);
       setBotTraits(traits.opponentTraits);
 

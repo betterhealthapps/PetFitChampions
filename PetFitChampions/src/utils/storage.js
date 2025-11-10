@@ -11,6 +11,7 @@ const KEYS = {
   OWNED_ITEMS: '@petfit_owned_items',
   EQUIPPED_COSMETICS: '@petfit_equipped_cosmetics',
   LEARNED_TRICKS: '@petfit_learned_tricks',
+  LEARNED_TRAITS: '@petfit_learned_traits',
   PET_SLOTS: '@petfit_pet_slots',
   LEADERBOARD_DATA: '@petfit_leaderboard',
   WEEKLY_STREAK: '@petfit_weekly_streak',
@@ -240,6 +241,25 @@ export const getLearnedTricks = async () => {
     return tricks ? JSON.parse(tricks) : [];
   } catch (error) {
     console.error('Error getting learned tricks:', error);
+    return [];
+  }
+};
+
+// Shop - Learned Traits
+export const saveLearnedTraits = async (traits) => {
+  try {
+    await AsyncStorage.setItem(KEYS.LEARNED_TRAITS, JSON.stringify(traits));
+  } catch (error) {
+    console.error('Error saving learned traits:', error);
+  }
+};
+
+export const getLearnedTraits = async () => {
+  try {
+    const traits = await AsyncStorage.getItem(KEYS.LEARNED_TRAITS);
+    return traits ? JSON.parse(traits) : [];
+  } catch (error) {
+    console.error('Error getting learned traits:', error);
     return [];
   }
 };

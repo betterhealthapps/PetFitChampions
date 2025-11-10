@@ -1,10 +1,10 @@
 import { BATTLE_ACTIONS } from '../data/constants';
 import { getAllActiveTraits } from './battleTraits';
 
-export const initializeBattleTraits = (playerPet, opponentPet) => {
+export const initializeBattleTraits = (playerPet, opponentPet, playerLearnedTraits = [], opponentLearnedTraits = []) => {
   return {
-    playerTraits: getAllActiveTraits(playerPet, opponentPet),
-    opponentTraits: getAllActiveTraits(opponentPet, playerPet),
+    playerTraits: getAllActiveTraits(playerPet, opponentPet, playerLearnedTraits),
+    opponentTraits: getAllActiveTraits(opponentPet, playerPet, opponentLearnedTraits),
   };
 };
 

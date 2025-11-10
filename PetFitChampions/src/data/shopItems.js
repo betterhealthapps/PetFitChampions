@@ -202,6 +202,41 @@ export const BATTLE_TRICKS = [
   },
 ];
 
+export const BATTLE_TRAITS_SHOP = [
+  {
+    id: 'first_strike',
+    name: 'First Strike',
+    cost: 200,
+    icon: '⚡',
+    description: 'Attack first if Agility > opponent',
+    requirement: 'Agility > Opponent',
+  },
+  {
+    id: 'endurance',
+    name: 'Endurance',
+    cost: 250,
+    icon: '💪',
+    description: 'Restore 10% health each turn',
+    requirement: 'Stamina > 70',
+  },
+  {
+    id: 'counter',
+    name: 'Counter',
+    cost: 300,
+    icon: '🔄',
+    description: '25% chance to reflect damage',
+    requirement: 'Defense > 60',
+  },
+  {
+    id: 'critical_hit',
+    name: 'Critical Master',
+    cost: 350,
+    icon: '💥',
+    description: '15% chance for double damage',
+    requirement: 'Strength > 80',
+  },
+];
+
 export const PET_SLOT_ITEM = {
   id: 'pet_slot',
   name: 'Additional Pet Slot',

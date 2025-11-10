@@ -12,14 +12,29 @@ import {
   applyEnduranceHealing,
   checkCounterReflect
 } from '../utils/battleLogic';
+import { getLearnedTraits } from '../utils/storage';
 
 export default function PvPBattleScreen({ route, navigation }) {
   const { opponent } = route.params;
   const { pet } = useContext(PetContext);
 
   const maxPlayerHealth = pet.stats.health;
+  const [learnedTraits, setLearnedTraits] = useState([]);
+  const [traitsInitialized, setTraitsInitialized] = useState(false);
+  const [playerTraits, setPlayerTraits] = useState({});
+  const [opponentTraits, setOpponentTraits] = useState({});
 
-  const { playerTraits, opponentTraits } = initializeBattleTraits(pet, opponent);
+  useEffect(() => {
+    const loadTraits = async () => {
+      const traits = await getLearnedTraits();
+      setLearnedTraits(traits);
+      const battleTraits = initializeBattleTraits(pet, opponent, traits, []);
+      setPlayerTraits(battleTraits.playerTraits);
+      setOpponentTraits(battleTraits.opponentTraits);
+      setTraitsInitialized(true);
+    };
+    loadTraits();
+  }, []);
 
   const [playerHealth, setPlayerHealth] = useState(pet.stats.health);
   const [opponentHealth, setOpponentHealth] = useState(opponent.maxHealth);

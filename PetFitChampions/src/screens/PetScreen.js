@@ -1,14 +1,28 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Card, Title, Text, ProgressBar, Button, Snackbar } from 'react-native-paper';
+import { useFocusEffect } from '@react-navigation/native';
 import { PetContext } from '../context/PetContext';
 import { EVOLUTION_TIERS } from '../data/constants';
 import { BATTLE_TRAITS, checkTraitActive } from '../utils/battleTraits';
+import { getLearnedTraits } from '../utils/storage';
 
 export default function PetScreen() {
   const { pet, gems, getLevelProgress, evolvePet } = useContext(PetContext);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [learnedTraits, setLearnedTraits] = useState([]);
+
+  const loadTraits = async () => {
+    const traits = await getLearnedTraits();
+    setLearnedTraits(traits);
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadTraits();
+    }, [])
+  );
 
   if (!pet) {
     return (
@@ -199,40 +213,54 @@ export default function PetScreen() {
             </Text>
             
             {Object.values(BATTLE_TRAITS).map(trait => {
-              const isActive = checkTraitActive(pet, trait);
+              const isOwned = learnedTraits.includes(trait.id);
+              const isActive = isOwned && checkTraitActive(pet, trait);
               const req = trait.requirement;
               const currentStat = pet.baseStats?.[req.stat] || stats[req.stat] || 0;
               const threshold = req.value || 0;
+              
+              let statusStyle = styles.traitLocked;
+              let statusActiveStyle = null;
+              let statusText = 'LOCKED';
+              
+              if (isActive) {
+                statusStyle = styles.traitActive;
+                statusActiveStyle = styles.traitStatusActive;
+                statusText = 'ACTIVE';
+              } else if (isOwned) {
+                statusStyle = styles.traitOwned;
+                statusActiveStyle = styles.traitStatusOwned;
+                statusText = 'OWNED';
+              }
 
               return (
                 <View 
                   key={trait.id} 
-                  style={[
-                    styles.traitRow,
-                    isActive ? styles.traitActive : styles.traitLocked
-                  ]}
+                  style={[styles.traitRow, statusStyle]}
                 >
                   <Text style={styles.traitIcon}>{trait.icon}</Text>
                   <View style={styles.traitInfo}>
                     <Text style={styles.traitName}>{trait.name}</Text>
                     <Text style={styles.traitDescription}>{trait.description}</Text>
-                    {!isActive && !req.opponent && (
+                    {!isOwned && (
+                      <Text style={styles.traitRequirement}>
+                        🔒 Purchase from Gem Shop to unlock
+                      </Text>
+                    )}
+                    {isOwned && !isActive && !req.opponent && (
                       <Text style={styles.traitRequirement}>
                         Requires {req.stat}: {threshold} (Current: {currentStat})
                       </Text>
                     )}
-                    {!isActive && req.opponent && (
+                    {isOwned && !isActive && req.opponent && (
                       <Text style={styles.traitRequirement}>
                         Requires {req.stat} higher than opponent
                       </Text>
                     )}
                   </View>
-                  <View style={[
-                    styles.traitStatus,
-                    isActive && styles.traitStatusActive
-                  ]}>
+                  <View style={[styles.traitStatus, statusActiveStyle]}>
                     <Text style={styles.traitStatusText}>
-                      {isActive ? 'ACTIVE' : 'LOCKED'}
+                      {statusText}
                     </Text>
                   </View>
                 </View>
@@ -392,6 +420,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F5E9',
     borderColor: '#43a047',
   },
+  traitOwned: {
+    backgroundColor: '#FFF9C4',
+    borderColor: '#FBC02D',
+  },
   traitLocked: {
     backgroundColor: '#FAFAFA',
     borderColor: '#E0E0E0',
@@ -426,6 +458,9 @@ const styles = StyleSheet.create({
   },
   traitStatusActive: {
     backgroundColor: '#43a047',
+  },
+  traitStatusOwned: {
+    backgroundColor: '#FBC02D',
   },
   traitStatusText: {
     fontSize: 11,

@@ -1,0 +1,700 @@
+Create a pet selection/switching system where users with multiple pet slots 
+can choose which pet to use.
+
+Requirements:
+
+1. Create /screens/PetSelectionScreen.js:
+   - Display all owned pets in a grid
+   - Show current active pet with "ACTIVE" badge
+   - Allow switching between owned pets
+   - Show empty slots with "+" to add new pet
+   - Navigate to pet shop when tapping empty slot
+
+2. Update /screens/HomeScreen.js:
+   - Add "Switch Pet" or "Change Pet" button
+   - Navigate to PetSelectionScreen
+
+3. Pet switching logic:
+   - Tap on owned pet to set as active
+   - Update Firebase: move selected pet to pets[0] position
+   - OR add activePetIndex field to track which pet is active
+   - Show confirmation: "Switched to [Pet Name]!"
+
+4. Display for each pet card:
+   - Pet icon
+   - Pet name
+   - Level
+   - Tier (I/II/III)
+   - "Active" badge if currently selected
+   - Lock icon if slot is locked
+
+5. Add pet button (for empty slots):
+   - Shows "+" icon
+   - "Add New Pet" text
+   - Shows required: Premium membership or 500 gems
+   - Navigates to pet shop or premium page
+
+// FILE: /screens/PetSelectionScreen.js
+
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
+import { STARTER_PETS } from '../config/petsData';
+
+export default function PetSelectionScreen({ navigation }) {
+  const [pets, setPets] = useState([]);
+  const [activePetIndex, setActivePetIndex] = useState(0);
+  const [petSlots, setPetSlots] = useState(1);
+  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    loadPets();
+  }, []);
+
+  const loadPets = async () => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      const data = userDoc.data();
+      
+      setPets(data.pets || []);
+      setActivePetIndex(data.activePetIndex || 0);
+      setPetSlots(data.petSlots || 1);
+      
+      // Check premium
+      const subscription = data.subscription || { tier: 'free' };
+      setIsPremium(subscription.tier !== 'free');
+    } catch (error) {
+      console.error('Error loading pets:', error);
+    }
+  };
+
+  const handleSelectPet = async (index) => {
+    if (index === activePetIndex) {
+      Alert.alert('Already Active', 'This pet is already your active pet!');
+      return;
+    }
+
+    try {
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      
+      await updateDoc(userRef, {
+        activePetIndex: index,
+      });
+
+      setActivePetIndex(index);
+      
+      Alert.alert(
+        'Pet Switched!',
+        `${pets[index].name} is now your active pet!`,
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const handleAddPet = () => {
+    if (!isPremium && petSlots >= 1) {
+      Alert.alert(
+        'Premium Required',
+        'Additional pet slots require Premium membership!',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Go Premium', onPress: () => navigation.navigate('Subscription') },
+        ]
+      );
+      return;
+    }
+
+    // Navigate to pet shop
+    navigation.navigate('PetShop');
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Your Pets</Text>
+        <Text style={styles.subtitle}>Tap to switch active pet</Text>
+      </View>
+
+      <View style={styles.petsGrid}>
+        {/* Render owned pets */}
+        {pets.map((pet, index) => {
+          const isActive = index === activePetIndex;
+          const config = STARTER_PETS.find(p => p.id === pet.id);
+          
+          return (
+            <TouchableOpacity
+              key={index}
+              style={[styles.petCard, isActive && styles.petCardActive]}
+              onPress={() => handleSelectPet(index)}
+            >
+              {isActive && (
+                <View style={styles.activeBadge}>
+                  <Text style={styles.activeBadgeText}>ACTIVE</Text>
+                </View>
+              )}
+              
+              <Text style={styles.petIcon}>{pet.icon}</Text>
+              <Text style={styles.petName}>{pet.name}</Text>
+              <Text style={styles.petLevel}>Level {pet.level}</Text>
+              <Text style={styles.petTier}>
+                Tier {pet.evolutionTier || 1}
+              </Text>
+              
+              {config?.premium && (
+                <View style={styles.premiumBadge}>
+                  <Text style={styles.premiumText}>⭐ Premium</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* Render empty slots */}
+        {Array.from({ length: petSlots - pets.length }).map((_, index) => (
+          <TouchableOpacity
+            key={`empty-${index}`}
+            style={[styles.petCard, styles.emptySlot]}
+            onPress={handleAddPet}
+          >
+            <Text style={styles.addIcon}>➕</Text>
+            <Text style={styles.addText}>Add New Pet</Text>
+            {!isPremium && (
+              <Text style={styles.requirementText}>Premium Required</Text>
+            )}
+          </TouchableOpacity>
+        ))}
+
+        {/* Locked slots */}
+        {Array.from({ length: 3 - petSlots }).map((_, index) => (
+          <View key={`locked-${index}`} style={[styles.petCard, styles.lockedSlot]}>
+            <Text style={styles.lockIcon}>🔒</Text>
+            <Text style={styles.lockedText}>Slot Locked</Text>
+            <TouchableOpacity
+              style={styles.unlockBtn}
+              onPress={() => navigation.navigate('GemShop')}
+            >
+              <Text style={styles.unlockBtnText}>Unlock: 500💎</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+
+      <TouchableOpacity
+        style={styles.backBtn}
+        onPress={() => navigation.goBack()}
+      >
+        <Text style={styles.backBtnText}>← Back</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  header: {
+    backgroundColor: '#32808D',
+    padding: 30,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  petsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 15,
+    justifyContent: 'space-around',
+  },
+  petCard: {
+    width: '45%',
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 15,
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'transparent',
+  },
+  petCardActive: {
+    borderColor: '#32808D',
+    backgroundColor: '#E8F5F7',
+  },
+  activeBadge: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  activeBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  petIcon: {
+    fontSize: 60,
+    marginBottom: 10,
+  },
+  petName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 3,
+  },
+  petLevel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  petTier: {
+    fontSize: 11,
+    color: '#999',
+  },
+  premiumBadge: {
+    marginTop: 5,
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  premiumText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  emptySlot: {
+    backgroundColor: '#F9F9F9',
+    borderStyle: 'dashed',
+    borderColor: '#CCC',
+  },
+  addIcon: {
+    fontSize: 50,
+    marginBottom: 10,
+  },
+  addText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#666',
+    marginBottom: 5,
+  },
+  requirementText: {
+    fontSize: 10,
+    color: '#999',
+  },
+  lockedSlot: {
+    backgroundColor: '#EFEFEF',
+    opacity: 0.7,
+  },
+  lockIcon: {
+    fontSize: 40,
+    marginBottom: 10,
+  },
+  lockedText: {
+    fontSize: 14,
+    color: '#999',
+    marginBottom: 10,
+  },
+  unlockBtn: {
+    backgroundColor: '#32808D',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  unlockBtnText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  backBtn: {
+    margin: 20,
+    padding: 15,
+    alignItems: 'center',
+  },
+  backBtnText: {
+    color: '#32808D',
+    fontSize: 16,
+  },
+});
+
+
+
+
+Create a premium pets shop where users can purchase Phoenix and Dragon pets.
+
+Requirements:
+
+1. Create /screens/PetShopScreen.js:
+   - Display all starter pets (free)
+   - Display premium pets (Phoenix, Dragon) with premium badge
+   - Free pets: Can select during onboarding, can't re-purchase
+   - Premium pets: Require premium membership to purchase
+
+2. Premium pet requirements:
+   - Phoenix: Premium membership + 500 gems
+   - Dragon: Premium membership + 750 gems
+
+3. Purchase flow:
+   - Check if user has premium membership
+   - Check if user has enough gems
+   - Check if user has empty pet slot
+   - Add pet to user.pets array
+   - Deduct gems
+   - Show success message
+
+4. Display for each pet:
+   - Pet icon (large)
+   - Pet name
+   - Pet type
+   - Base stats preview
+   - Special ability description
+   - Price (for premium pets)
+   - "Premium Required" badge
+   - Purchase/Select button
+
+5. Premium check:
+   - If not premium: Show "Upgrade to Premium" button
+   - If premium but no gems: Show "Not Enough Gems"
+   - If premium + gems: Show "Purchase" button
+
+// FILE: /screens/PetShopScreen.js
+
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
+import { STARTER_PETS } from '../config/petsData';
+
+export default function PetShopScreen({ navigation }) {
+  const [userGems, setUserGems] = useState(0);
+  const [ownedPets, setOwnedPets] = useState([]);
+  const [petSlots, setPetSlots] = useState(1);
+  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    loadShopData();
+  }, []);
+
+  const loadShopData = async () => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      const data = userDoc.data();
+      
+      setUserGems(data.gems || 0);
+      setOwnedPets(data.pets || []);
+      setPetSlots(data.petSlots || 1);
+      
+      const subscription = data.subscription || { tier: 'free' };
+      setIsPremium(subscription.tier !== 'free');
+    } catch (error) {
+      console.error('Error loading shop:', error);
+    }
+  };
+
+  const handlePurchasePet = async (pet) => {
+    // Check if premium pet
+    if (pet.premium && !isPremium) {
+      Alert.alert(
+        'Premium Required',
+        `${pet.name} is a premium pet. Upgrade to Health Champion to unlock!`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Go Premium', onPress: () => navigation.navigate('Subscription') },
+        ]
+      );
+      return;
+    }
+
+    // Check if already owned
+    if (ownedPets.some(p => p.id === pet.id)) {
+      Alert.alert('Already Owned', 'You already have this pet!');
+      return;
+    }
+
+    // Check pet slots
+    if (ownedPets.length >= petSlots) {
+      Alert.alert(
+        'No Empty Slots',
+        'Purchase additional pet slots in the Gem Shop!',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Gem Shop', onPress: () => navigation.navigate('GemShop') },
+        ]
+      );
+      return;
+    }
+
+    // Premium pet costs
+    const PREMIUM_PET_COSTS = {
+      phoenix: 500,
+      dragon: 750,
+    };
+
+    const cost = pet.premium ? PREMIUM_PET_COSTS[pet.id] : 0;
+
+    // Check gems
+    if (cost > 0 && userGems < cost) {
+      Alert.alert('Not Enough Gems', `You need ${cost} gems. You have ${userGems}.`);
+      return;
+    }
+
+    // Confirm purchase
+    Alert.alert(
+      'Purchase Pet?',
+      pet.premium ? 
+        `Purchase ${pet.name} for ${cost} gems?` :
+        `Add ${pet.name} to your team?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: pet.premium ? 'Purchase' : 'Add',
+          onPress: async () => {
+            try {
+              const userRef = doc(db, 'users', auth.currentUser.uid);
+
+              // Create new pet instance
+              const newPet = {
+                id: pet.id,
+                name: pet.evolutionTree[0].name,
+                icon: pet.evolutionTree[0].icon,
+                type: pet.type,
+                level: 1,
+                currentXP: 0,
+                evolutionTier: 1,
+                baseStats: { ...pet.baseStats },
+                cosmetics: {
+                  hat: null,
+                  accessory: null,
+                  skin: null,
+                },
+                ownedCosmetics: [],
+                learnedTricks: [],
+                emotionalBond: 0,
+              };
+
+              // Add to pets array
+              const updatedPets = [...ownedPets, newPet];
+
+              // Update Firebase
+              await updateDoc(userRef, {
+                pets: updatedPets,
+                ...(cost > 0 && { gems: increment(-cost) }),
+              });
+
+              Alert.alert(
+                '🎉 Pet Added!',
+                `${pet.name} joined your team!`,
+                [{ text: 'OK', onPress: () => {
+                  loadShopData();
+                  navigation.goBack();
+                }}]
+              );
+            } catch (error) {
+              Alert.alert('Error', error.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const starterPets = STARTER_PETS.filter(p => !p.premium);
+  const premiumPets = STARTER_PETS.filter(p => p.premium);
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Pet Shop</Text>
+        <View style={styles.gemBalance}>
+          <Text style={styles.gemIcon}>💎</Text>
+          <Text style={styles.gemAmount}>{userGems}</Text>
+        </View>
+      </View>
+
+      {/* Info */}
+      <View style={styles.infoCard}>
+        <Text style={styles.infoText}>
+          Pet Slots: {ownedPets.length}/{petSlots}
+        </Text>
+        {ownedPets.length >= petSlots && (
+          <Text style={styles.warningText}>
+            ⚠️ Purchase more slots in Gem Shop
+          </Text>
+        )}
+      </View>
+
+      {/* Starter Pets */}
+      <Text style={styles.sectionTitle}>Starter Pets</Text>
+      {starterPets.map(pet => {
+        const owned = ownedPets.some(p => p.id === pet.id);
+        
+        return (
+          <View key={pet.id} style={styles.petCard}>
+            <Text style={styles.petCardIcon}>{pet.icon}</Text>
+            
+            <View style={styles.petCardInfo}>
+              <Text style={styles.petCardName}>{pet.name}</Text>
+              <Text style={styles.petCardType}>{pet.type}</Text>
+              <Text style={styles.petCardDesc}>{pet.description}</Text>
+              
+              <Text style={styles.abilityLabel}>
+                ⚡ {pet.runnerAbility.name}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.purchaseBtn,
+                owned && styles.purchaseBtnOwned
+              ]}
+              onPress={() => handlePurchasePet(pet)}
+              disabled={owned}
+            >
+              <Text style={styles.purchaseBtnText}>
+                {owned ? '✓ Owned' : '+ Add'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+
+      {/* Premium Pets */}
+      <Text style={styles.sectionTitle}>⭐ Premium Pets</Text>
+      
+      {!isPremium && (
+        <View style={styles.premiumPromo}>
+          <Text style={styles.promoText}>
+            Premium pets require Health Champion membership
+          </Text>
+          <TouchableOpacity
+            style={styles.upgradeBtn}
+            onPress={() => navigation.navigate('Subscription')}
+          >
+            <Text style={styles.upgradeBtnText}>Upgrade to Premium</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {premiumPets.map(pet => {
+        const owned = ownedPets.some(p => p.id === pet.id);
+        const costs = { phoenix: 500, dragon: 750 };
+        const cost = costs[pet.id];
+        
+        return (
+          <View key={pet.id} style={[styles.petCard, styles.premiumPetCard]}>
+            <View style={styles.premiumBadge}>
+              <Text style={styles.premiumBadgeText}>⭐ PREMIUM</Text>
+            </View>
+            
+            <Text style={styles.petCardIcon}>{pet.icon}</Text>
+            
+            <View style={styles.petCardInfo}>
+              <Text style={styles.petCardName}>{pet.name}</Text>
+              <Text style={styles.petCardType}>{pet.type}</Text>
+              <Text style={styles.petCardDesc}>{pet.description}</Text>
+              
+              <Text style={styles.abilityLabel}>
+                ⚡ {pet.runnerAbility.name}
+              </Text>
+              
+              <View style={styles.priceTag}>
+                <Text style={styles.priceText}>{cost} 💎</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.purchaseBtn,
+                styles.premiumPurchaseBtn,
+                owned && styles.purchaseBtnOwned,
+                !isPremium && styles.purchaseBtnLocked,
+              ]}
+              onPress={() => handlePurchasePet(pet)}
+              disabled={owned || !isPremium}
+            >
+              <Text style={styles.purchaseBtnText}>
+                {owned ? '✓ Owned' : !isPremium ? '🔒 Premium' : `Buy ${cost}💎`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+
+      <View style={{ height: 40 }} />
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  // ... (similar to previous styles, add these new ones:)
+  premiumPetCard: {
+    borderWidth: 2,
+    borderColor: '#FFD700',
+  },
+  premiumBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  premiumBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  priceTag: {
+    marginTop: 10,
+    backgroundColor: '#32808D',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  priceText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  premiumPurchaseBtn: {
+    backgroundColor: '#FFD700',
+  },
+  purchaseBtnLocked: {
+    backgroundColor: '#CCC',
+  },
+  // ... rest of styles
+});
+
+
+Add pet selection and pet shop navigation buttons:
+
+1. In HomeScreen.js:
+   - Add "Switch Pet" button (if user has multiple pets)
+   - Navigate to PetSelectionScreen
+
+2. In PetScreen.js:
+   - Add "Get More Pets" button
+   - Navigate to PetShopScreen
+
+3. In GemShop (Pet Slots section):
+   - After purchasing slot, show "Add Pet Now" button
+   - Navigate to PetShopScreen
+
+4. Update AppNavigator.js to include:
+   - PetSelectionScreen
+   - PetShopScreen

@@ -49,17 +49,20 @@ export const checkTraitActive = (pet, trait, opponentPet = null) => {
   }
 };
 
-export const getActiveTrait = (pet, traitId, opponentPet = null) => {
+export const getActiveTrait = (pet, traitId, opponentPet = null, learnedTraits = []) => {
   const trait = BATTLE_TRAITS[traitId];
+  const isOwned = learnedTraits.includes(trait.id);
+  if (!isOwned) return null;
+  
   const isActive = checkTraitActive(pet, trait, opponentPet);
   return isActive ? trait : null;
 };
 
-export const getAllActiveTraits = (pet, opponentPet = null) => {
+export const getAllActiveTraits = (pet, opponentPet = null, learnedTraits = []) => {
   return {
-    firstStrike: getActiveTrait(pet, 'firstStrike', opponentPet),
-    endurance: getActiveTrait(pet, 'endurance'),
-    counter: getActiveTrait(pet, 'counter'),
-    criticalHit: getActiveTrait(pet, 'criticalHit'),
+    firstStrike: getActiveTrait(pet, 'firstStrike', opponentPet, learnedTraits),
+    endurance: getActiveTrait(pet, 'endurance', null, learnedTraits),
+    counter: getActiveTrait(pet, 'counter', null, learnedTraits),
+    criticalHit: getActiveTrait(pet, 'criticalHit', null, learnedTraits),
   };
 };
