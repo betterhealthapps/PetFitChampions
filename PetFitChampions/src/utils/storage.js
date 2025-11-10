@@ -7,6 +7,7 @@ const KEYS = {
   GEMS: '@petfit_gems',
   ENERGY: '@petfit_energy',
   LAST_ENERGY_UPDATE: '@petfit_last_energy_update',
+  BATTLE_STATS: '@petfit_battle_stats',
 };
 
 // User storage
@@ -127,6 +128,41 @@ export const getLastEnergyUpdate = async () => {
   } catch (error) {
     console.error('Error getting last energy update:', error);
     return null;
+  }
+};
+
+// Battle stats storage
+export const saveBattleStats = async (stats) => {
+  try {
+    await AsyncStorage.setItem(KEYS.BATTLE_STATS, JSON.stringify(stats));
+  } catch (error) {
+    console.error('Error saving battle stats:', error);
+  }
+};
+
+export const getBattleStats = async () => {
+  try {
+    const stats = await AsyncStorage.getItem(KEYS.BATTLE_STATS);
+    return stats ? JSON.parse(stats) : {
+      pvp: { wins: 0, losses: 0 },
+      bot: { 
+        easy: { wins: 0, losses: 0 }, 
+        medium: { wins: 0, losses: 0 }, 
+        hard: { wins: 0, losses: 0 } 
+      },
+      runner: { highScore: 0, dailyGems: 0 }
+    };
+  } catch (error) {
+    console.error('Error getting battle stats:', error);
+    return {
+      pvp: { wins: 0, losses: 0 },
+      bot: { 
+        easy: { wins: 0, losses: 0 }, 
+        medium: { wins: 0, losses: 0 }, 
+        hard: { wins: 0, losses: 0 } 
+      },
+      runner: { highScore: 0, dailyGems: 0 }
+    };
   }
 };
 
