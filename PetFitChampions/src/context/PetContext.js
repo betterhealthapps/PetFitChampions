@@ -118,7 +118,12 @@ export const PetProvider = ({ children }) => {
       throw new Error('Not enough gems');
     }
     
-    const newTier = (pet.tier || 1) + 1;
+    // Convert tier to number to avoid string concatenation
+    const currentTier = Number(pet.tier) || 1;
+    const newTier = currentTier + 1;
+    
+    console.log('Evolution attempt:', { currentTier, newTier, gems, tierCost });
+    
     if (newTier > 3) {
       throw new Error('Already at max tier');
     }
@@ -130,8 +135,9 @@ export const PetProvider = ({ children }) => {
     
     // Boost stats on evolution (50% increase)
     const evolvedStats = {};
-    Object.keys(pet.stats).forEach((stat) => {
-      evolvedStats[stat] = Math.floor(pet.stats[stat] * 1.5);
+    const stats = pet.stats || {};
+    Object.keys(stats).forEach((stat) => {
+      evolvedStats[stat] = Math.floor(stats[stat] * 1.5);
     });
     
     // Update pet
@@ -143,6 +149,8 @@ export const PetProvider = ({ children }) => {
     
     setPet(evolvedPet);
     await savePet(evolvedPet);
+    
+    console.log('Evolution successful:', { newTier, newStats: evolvedStats });
     
     return evolvedPet;
   };
