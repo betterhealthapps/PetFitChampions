@@ -1,7 +1,13 @@
 # PetFit Champions
 
 ## Overview
-PetFit Champions is a gamified React Native mobile application where users track daily health activities to earn XP, level up virtual pets, and prepare them for future PvP battles. The project aims to integrate health and fitness with engaging pet-centric gameplay, offering a unique blend of wellness and entertainment. This is the Phase 1 MVP implementation, focusing on core tracking, pet progression, and battle mechanics.
+PetFit Champions is a gamified React Native mobile application where users track daily health activities to earn XP, level up virtual pets, and battle AI opponents in three distinct game modes. The project integrates health and fitness with engaging pet-centric gameplay, offering a unique blend of wellness and entertainment. This is the Phase 1 MVP implementation, featuring complete core tracking, pet progression, and battle mechanics.
+
+## Recent Changes (November 10, 2025)
+- **Bot Arena Implementation**: Fully functional turn-based battle system with three difficulty levels (Easy/Medium/Hard), trait-aware AI, player-baseline stat scaling, and balanced reward distribution.
+- **Pet Runner Implementation**: Complete endless runner mini-game with obstacle avoidance, score-based progression, gem/XP rewards, and anti-farming daily gem cap (50/day).
+- **Battle Logic Enhancement**: Implemented comprehensive battle utilities with trait-aware AI strategy, dodge mechanics, damage calculation, and reward balancing across all modes.
+- **Critical Bug Fixes**: All battle screens now correctly use PetContext.addGems and PetContext.addXP for proper level progression and gem tracking.
 
 ## User Preferences
 None specified yet.
@@ -19,10 +25,10 @@ The application is built with **React Native and Expo SDK 54**, utilizing **Reac
 - **Pet System**: Users select from 4 starter pets, each with unique stat specializations. Pets level up (1-50) by earning XP, gaining +2 stats per level, and can evolve through 3 tiers at levels 16 and 36, receiving 50% stat boosts.
 - **Health Tracking**: Manual input for 8 activities (steps, sleep, mood, water, meditation, meals, journal, breathing), with configurable XP conversion rates and a daily completion bonus.
 - **XP & Leveling**: Automatic XP calculation and level progression system with gem rewards upon leveling up.
-- **Battle System**: Features a unified Battle Mode Selector with three modes:
-    - **PvP Arena**: Turn-based combat against AI opponents, costing 20 energy, with gem rewards for victory/loss tracking.
-    - **Bot Arena**: Practice battles with varying difficulties, costing 10 energy, with gem rewards.
-    - **Pet Runner**: An endless runner mini-game, costing 5 energy, with gem rewards based on score.
+- **Battle System**: Features a unified Battle Mode Selector with three fully implemented modes:
+    - **PvP Arena**: Turn-based combat against AI opponents, costing 20 energy, with 10-30 gem rewards for victory/loss tracking.
+    - **Bot Arena**: Practice battles with three difficulties (Easy/Medium/Hard), costing 10 energy. Features trait-aware AI strategy, stat scaling from player baseline, and difficulty-based rewards (Easy: 4-6 gems, 25 XP; Medium: 7-10 gems, 40 XP; Hard: 11-14 gems, 60 XP). Defeats result in negative gem loss (-1/-3/-5) and reduced XP (25% of win amount).
+    - **Pet Runner**: An endless runner mini-game, costing 5 energy. Features obstacle avoidance, score-based gem rewards (5 gems at <50 score, scaling to 25 gems at 500+ score), XP rewards (score/2, max 100), and a 50 gem daily earning cap to prevent farming. Tracks high scores and total runs.
 - **Energy System**: 100 max energy, regenerating at 1 per minute, with variable costs per battle mode.
 - **Gem Shop**: A marketplace with four categories:
     - **Cosmetics**: 15 items (hats, accessories, skins) with rarity, equip/unequip functionality.
