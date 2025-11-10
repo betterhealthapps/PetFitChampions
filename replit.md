@@ -15,7 +15,7 @@ PetFit Champions is a gamified React Native mobile application where users track
   - Implemented ability flag reset system to prevent cross-pet ability accumulation when switching pets
   - Fixed agility-scaled jump velocity with safe additive bonus (prevents negative velocity blow-ups)
   - Fixed flying pet altitude initialization and ground collision with bounce-back mechanics
-- **Pet Evolution Fix**: Added explicit Number() coercion to currentTier variable in PetScreen.js, ensuring Tier 1 → 2 evolution at level 16 (was comparing string "1" vs number 1).
+- **Pet Evolution System Fix**: Fixed critical evolution bug in PetContext.js where AsyncStorage's string tier values caused string concatenation instead of numeric addition (e.g., "1" + 1 = "11" instead of 2). Now properly converts tier to number before incrementing, enabling evolution to work when requirements are met. Also added defensive stats checking and debug logging.
 - **Bot Arena & Battle Systems**: Fully functional turn-based battle system with three difficulty levels, trait-aware AI, stats persistence, and BotArenaResultScreen with rewards breakdown.
 - **Cosmetics Stat Boost System**: All 15 cosmetic items display specific stat bonuses in the Gem Shop with visual pills, making cosmetic choices strategically meaningful.
 
