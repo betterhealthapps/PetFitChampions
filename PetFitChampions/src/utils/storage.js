@@ -8,6 +8,12 @@ const KEYS = {
   ENERGY: '@petfit_energy',
   LAST_ENERGY_UPDATE: '@petfit_last_energy_update',
   BATTLE_STATS: '@petfit_battle_stats',
+  OWNED_ITEMS: '@petfit_owned_items',
+  EQUIPPED_COSMETICS: '@petfit_equipped_cosmetics',
+  LEARNED_TRICKS: '@petfit_learned_tricks',
+  PET_SLOTS: '@petfit_pet_slots',
+  LEADERBOARD_DATA: '@petfit_leaderboard',
+  WEEKLY_STREAK: '@petfit_weekly_streak',
 };
 
 // User storage
@@ -170,4 +176,160 @@ export const getBattleStats = async () => {
 export const getTodayKey = () => {
   const today = new Date();
   return today.toISOString().split('T')[0];
+};
+
+// Shop - Owned Items
+export const saveOwnedItems = async (items) => {
+  try {
+    await AsyncStorage.setItem(KEYS.OWNED_ITEMS, JSON.stringify(items));
+  } catch (error) {
+    console.error('Error saving owned items:', error);
+  }
+};
+
+export const getOwnedItems = async () => {
+  try {
+    const items = await AsyncStorage.getItem(KEYS.OWNED_ITEMS);
+    return items ? JSON.parse(items) : [];
+  } catch (error) {
+    console.error('Error getting owned items:', error);
+    return [];
+  }
+};
+
+// Shop - Equipped Cosmetics
+export const saveEquippedCosmetics = async (cosmetics) => {
+  try {
+    await AsyncStorage.setItem(KEYS.EQUIPPED_COSMETICS, JSON.stringify(cosmetics));
+  } catch (error) {
+    console.error('Error saving equipped cosmetics:', error);
+  }
+};
+
+export const getEquippedCosmetics = async () => {
+  try {
+    const cosmetics = await AsyncStorage.getItem(KEYS.EQUIPPED_COSMETICS);
+    return cosmetics ? JSON.parse(cosmetics) : {
+      hat: null,
+      accessory: null,
+      skin: null,
+    };
+  } catch (error) {
+    console.error('Error getting equipped cosmetics:', error);
+    return {
+      hat: null,
+      accessory: null,
+      skin: null,
+    };
+  }
+};
+
+// Shop - Learned Tricks
+export const saveLearnedTricks = async (tricks) => {
+  try {
+    await AsyncStorage.setItem(KEYS.LEARNED_TRICKS, JSON.stringify(tricks));
+  } catch (error) {
+    console.error('Error saving learned tricks:', error);
+  }
+};
+
+export const getLearnedTricks = async () => {
+  try {
+    const tricks = await AsyncStorage.getItem(KEYS.LEARNED_TRICKS);
+    return tricks ? JSON.parse(tricks) : [];
+  } catch (error) {
+    console.error('Error getting learned tricks:', error);
+    return [];
+  }
+};
+
+// Shop - Pet Slots
+export const savePetSlots = async (slots) => {
+  try {
+    await AsyncStorage.setItem(KEYS.PET_SLOTS, JSON.stringify(slots));
+  } catch (error) {
+    console.error('Error saving pet slots:', error);
+  }
+};
+
+export const getPetSlots = async () => {
+  try {
+    const slots = await AsyncStorage.getItem(KEYS.PET_SLOTS);
+    return slots ? JSON.parse(slots) : 1;
+  } catch (error) {
+    console.error('Error getting pet slots:', error);
+    return 1;
+  }
+};
+
+// Leaderboard
+export const saveLeaderboardData = async (data) => {
+  try {
+    await AsyncStorage.setItem(KEYS.LEADERBOARD_DATA, JSON.stringify(data));
+  } catch (error) {
+    console.error('Error saving leaderboard data:', error);
+  }
+};
+
+export const getLeaderboardData = async () => {
+  try {
+    const data = await AsyncStorage.getItem(KEYS.LEADERBOARD_DATA);
+    return data ? JSON.parse(data) : {
+      totalXP: 0,
+      weeklyXP: 0,
+      currentStreak: 0,
+      bestStreak: 0,
+      lastActiveDate: null,
+      weekStartDate: null,
+    };
+  } catch (error) {
+    console.error('Error getting leaderboard data:', error);
+    return {
+      totalXP: 0,
+      weeklyXP: 0,
+      currentStreak: 0,
+      bestStreak: 0,
+      lastActiveDate: null,
+      weekStartDate: null,
+    };
+  }
+};
+
+export const updateLeaderboardStats = async (xpGained) => {
+  try {
+    const data = await getLeaderboardData();
+    const today = getTodayKey();
+    const now = new Date();
+    const currentWeekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+    const weekStartKey = currentWeekStart.toISOString().split('T')[0];
+
+    if (!data.weekStartDate || data.weekStartDate !== weekStartKey) {
+      data.weeklyXP = 0;
+      data.weekStartDate = weekStartKey;
+    }
+
+    data.totalXP += xpGained;
+    data.weeklyXP += xpGained;
+
+    if (data.lastActiveDate === today) {
+    } else {
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayKey = yesterday.toISOString().split('T')[0];
+
+      if (data.lastActiveDate === yesterdayKey) {
+        data.currentStreak += 1;
+      } else if (data.lastActiveDate !== today) {
+        data.currentStreak = 1;
+      }
+
+      data.bestStreak = Math.max(data.bestStreak, data.currentStreak);
+      data.lastActiveDate = today;
+    }
+
+    await saveLeaderboardData(data);
+    return data;
+  } catch (error) {
+    console.error('Error updating leaderboard stats:', error);
+  }
 };

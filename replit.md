@@ -3,7 +3,7 @@
 ## Overview
 PetFit Champions is a gamified health tracking mobile app built with React Native and Expo. Users track daily health activities to earn XP, level up virtual pets, and prepare them for future PvP battles. This is the Phase 1 MVP implementation.
 
-## Current Status (Phase 3 MVP - Completed)
+## Current Status (Phase 4 MVP - Completed)
 The app includes:
 - **Authentication**: Email/password signup and login with persistent sessions
 - **Pet Selection**: Choose from 4 unique starter pets with distinct stat specializations
@@ -19,8 +19,18 @@ The app includes:
 - **Pet Runner**: Endless runner mini-game (placeholder), 5 energy, 1 gem per 10 points
 - **Energy System**: 100 max energy, variable cost per mode, regenerates 1 energy per minute
 - **Battle Stats**: Win/loss tracking for all battle modes, persisted to local storage
-- **Navigation**: Bottom tab navigation with Battle tab, locked PvP battle screens prevent mid-battle exits
-- **Data Persistence**: Local storage using AsyncStorage for user, pet, health, energy, gems, and battle stats
+- **Gem Shop**: Comprehensive marketplace with 4 categories (Cosmetics, Stat Boosts, Battle Tricks, Pet Slots)
+- **Cosmetics**: 15 items across hats, accessories, and skins with rarity system and equip/unequip
+- **Stat Boosts**: Permanent stat increases (+5 per boost, max 100) for all 7 stats
+- **Battle Tricks**: 4 special moves unlocked by level (Quick Strike, Power Slam, Rejuvenate, Counter Stance)
+- **Pet Slots**: Purchase additional pet slots (max 3 total) for 500 gems each
+- **Battle Traits**: 4 passive abilities (First Strike, Endurance, Counter, Critical Master) unlocked by stat thresholds
+- **Trait System**: Active trait indicators in battles, trait status display in Pet screen
+- **Leaderboard**: Global rankings across 4 categories (Overall XP, Battle Wins, Best Streak, Weekly XP)
+- **Simulated Rankings**: AI competitors for competitive single-player experience
+- **Streak Tracking**: Daily login streak with automatic calculation and best streak records
+- **Navigation**: 6-tab bottom navigation (Home, Track, Battle, Leaderboard, Pet, Profile)
+- **Data Persistence**: Local storage using AsyncStorage for all features including shop purchases, traits, and leaderboard data
 - **Visual Assets**: App icon and 12 pet evolution illustrations (4 pets × 3 tiers)
 
 ## Project Structure
@@ -39,6 +49,8 @@ PetFitChampions/
 │   │   ├── PvPResultScreen.js (Victory/defeat)
 │   │   ├── BotArenaScreen.js (Bot practice - placeholder)
 │   │   ├── RunnerGameScreen.js (Endless runner - placeholder)
+│   │   ├── GemShopScreen.js (Shop with 4 categories)
+│   │   ├── LeaderboardScreen.js (Rankings & stats)
 │   │   ├── PetScreen.js
 │   │   └── ProfileScreen.js
 │   ├── components/       # Reusable UI components
@@ -50,10 +62,12 @@ PetFitChampions/
 │   ├── utils/            # Utility functions
 │   │   ├── xpCalculations.js
 │   │   ├── battleLogic.js
+│   │   ├── battleTraits.js
 │   │   └── storage.js
 │   ├── data/             # Constants and templates
 │   │   ├── constants.js
-│   │   └── petTemplates.js
+│   │   ├── petTemplates.js
+│   │   └── shopItems.js
 │   └── assets/           # Images and icons
 ├── App.js               # Main app with navigation setup
 └── package.json         # Dependencies
@@ -161,6 +175,91 @@ The Battle tab opens a mode selector with 3 battle types:
 - Ranked matchmaking with leaderboards
 - Pet abilities and special moves
 - Social features (friend battles, guilds)
+
+## Gem Shop System
+
+### Shop Categories
+
+**1. Cosmetics** (15 items total)
+- **Hats** (4): Party Hat (50💎), Wizard Hat (100💎), Royal Crown (150💎), Halo (200💎)
+- **Accessories** (4): Bow Tie (75💎), Cool Glasses (80💎), Winter Scarf (90💎), Gold Medal (175💎)
+- **Skins** (3): Glowing Aura (150💎), Rainbow Fur (200💎), Galaxy Coat (250💎)
+- **Rarity System**: Common (gray), Uncommon (green), Rare (blue), Epic (purple)
+- **Features**: Purchase, own, equip/unequip cosmetics per slot (hat, accessory, skin)
+
+**2. Stat Boosts** (7 permanent upgrades)
+- Cost: 300 gems per boost
+- Effect: +5 to selected stat (health, energy, strength, defense, stamina, agility, attack)
+- Maximum: 100 per stat
+- Warning: Permanent and cannot be reversed
+
+**3. Battle Tricks** (4 special moves)
+- **Quick Strike** (100💎, Level 5): Fast attack with 20% bonus damage
+- **Power Slam** (200💎, Level 10): Heavy attack, 50% bonus but 30% accuracy
+- **Rejuvenate** (250💎, Level 15): Restore 20% HP instead of attacking
+- **Counter Stance** (300💎, Level 20): Reflect 50% of damage taken this turn
+- Note: Tricks are currently learned but not yet implemented in battle mechanics
+
+**4. Pet Slots**
+- Cost: 500 gems per slot
+- Maximum: 3 total slots
+- Purpose: Train multiple pets simultaneously (future feature)
+
+## Battle Traits System
+
+### Passive Abilities
+
+**1. First Strike** ⚡
+- Requirement: Agility > opponent's Agility
+- Effect: Attack first in battle regardless of turn order
+- Tactical advantage for speed-based builds
+
+**2. Endurance** 💪
+- Requirement: Stamina > 70
+- Effect: Restore 10% health at the start of each turn
+- Ideal for tank and sustain strategies
+
+**3. Counter** 🔄
+- Requirement: Defense > 60
+- Effect: 25% chance to reflect 50% of damage back to attacker
+- Punishes aggressive opponents
+
+**4. Critical Master** 💥
+- Requirement: Strength > 80
+- Effect: 15% chance to deal double damage on attacks
+- High-risk, high-reward power build
+
+### Trait Display
+- **Battle Screen**: Active trait icons shown above pet portraits
+- **Pet Screen**: Full trait list with active/locked status and requirements
+- **Battle Log**: Trait activations logged with emoji indicators
+
+## Leaderboard System
+
+### Ranking Categories
+
+**1. Overall XP** 📊
+- Total XP earned across all time
+- Reflects overall dedication and progress
+
+**2. Battle Masters** ⚔️
+- Total PvP battle wins
+- Competitive battle performance metric
+
+**3. Consistency** 🔥
+- Best daily login streak
+- Rewards long-term daily engagement
+
+**4. Weekly Top** 📅
+- XP earned this week only
+- Resets every Monday for fresh competition
+
+### Features
+- Top 10 rankings per category
+- User position highlighted in special blue
+- Simulated AI competitors for single-player experience
+- Rank badges: 🥇 🥈 🥉 for top 3
+- Category-specific tips for climbing ranks
 
 ## Recent Changes
 - **November 10, 2025 (Update 5)**: Multiple Battle Modes

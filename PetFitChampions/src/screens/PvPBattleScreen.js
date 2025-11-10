@@ -4,11 +4,22 @@ import { Card, Title, Text, Button, ProgressBar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PetContext } from '../context/PetContext';
 import { BATTLE_ACTIONS, COLORS } from '../data/constants';
-import { calculateDamage, getDefenseBonus, getAIAction } from '../utils/battleLogic';
+import { 
+  calculateDamage, 
+  getDefenseBonus, 
+  getAIAction,
+  initializeBattleTraits,
+  applyEnduranceHealing,
+  checkCounterReflect
+} from '../utils/battleLogic';
 
 export default function PvPBattleScreen({ route, navigation }) {
   const { opponent } = route.params;
   const { pet } = useContext(PetContext);
+
+  const maxPlayerHealth = pet.stats.health;
+
+  const { playerTraits, opponentTraits } = initializeBattleTraits(pet, opponent);
 
   const [playerHealth, setPlayerHealth] = useState(pet.stats.health);
   const [opponentHealth, setOpponentHealth] = useState(opponent.maxHealth);
@@ -18,8 +29,6 @@ export default function PvPBattleScreen({ route, navigation }) {
   const [opponentDefending, setOpponentDefending] = useState(false);
   const [battleEnded, setBattleEnded] = useState(false);
   const [shakeAnim] = useState(new Animated.Value(0));
-
-  const maxPlayerHealth = pet.stats.health;
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => true);
@@ -46,19 +55,34 @@ export default function PvPBattleScreen({ route, navigation }) {
 
     setPlayerAction(action);
     let damage = 0;
-    let logMessage = '';
+    let newLogs = [];
+
+    if (playerTraits.endurance) {
+      const healedHealth = applyEnduranceHealing(playerHealth, maxPlayerHealth, playerTraits.endurance);
+      if (healedHealth > playerHealth) {
+        const healAmount = healedHealth - playerHealth;
+        setPlayerHealth(healedHealth);
+        newLogs.push(`💪 Endurance restored ${healAmount} HP!`);
+      }
+    }
 
     if (action === BATTLE_ACTIONS.DEFEND) {
-      logMessage = `${pet.name} takes a defensive stance!`;
+      newLogs.push(`${pet.name} takes a defensive stance!`);
     } else {
       const defenseMultiplier = opponentDefending ? 0.5 : 1.0;
-      damage = Math.floor(calculateDamage(pet, opponent, action) * defenseMultiplier);
+      damage = Math.floor(calculateDamage(pet, opponent, action, playerTraits) * defenseMultiplier);
+      
+      const isCrit = playerTraits.criticalHit && damage > calculateDamage(pet, opponent, action);
+      if (isCrit) {
+        newLogs.push(`💥 Critical Master! Double damage!`);
+      }
+
       const newOpponentHealth = Math.max(0, opponentHealth - damage);
       setOpponentHealth(newOpponentHealth);
       shake();
 
       const actionName = action === BATTLE_ACTIONS.SPECIAL ? 'Special Attack' : 'Attack';
-      logMessage = `${pet.name} used ${actionName} and dealt ${damage} damage!`;
+      newLogs.push(`${pet.name} used ${actionName} and dealt ${damage} damage!`);
 
       if (newOpponentHealth <= 0) {
         setBattleEnded(true);
@@ -68,7 +92,7 @@ export default function PvPBattleScreen({ route, navigation }) {
       }
     }
 
-    setBattleLog([logMessage, ...battleLog]);
+    setBattleLog([...newLogs, ...battleLog]);
     setOpponentDefending(false);
     setPlayerTurn(false);
   };
@@ -76,20 +100,37 @@ export default function PvPBattleScreen({ route, navigation }) {
   const executeAITurn = () => {
     const aiAction = getAIAction(opponent, pet, opponentHealth, playerHealth);
     let damage = 0;
-    let logMessage = '';
+    let newLogs = [];
+
+    if (opponentTraits.endurance) {
+      const healedHealth = applyEnduranceHealing(opponentHealth, opponent.maxHealth, opponentTraits.endurance);
+      if (healedHealth > opponentHealth) {
+        const healAmount = healedHealth - opponentHealth;
+        setOpponentHealth(healedHealth);
+        newLogs.push(`💪 ${opponent.name}'s Endurance restored ${healAmount} HP!`);
+      }
+    }
 
     if (aiAction === BATTLE_ACTIONS.DEFEND) {
       setOpponentDefending(true);
-      logMessage = `${opponent.name} takes a defensive stance!`;
+      newLogs.push(`${opponent.name} takes a defensive stance!`);
     } else {
       const defenseMultiplier = playerAction === BATTLE_ACTIONS.DEFEND ? 0.5 : 1.0;
-      damage = Math.floor(calculateDamage(opponent, pet, aiAction) * defenseMultiplier);
+      damage = Math.floor(calculateDamage(opponent, pet, aiAction, opponentTraits) * defenseMultiplier);
+
+      const counterDamage = checkCounterReflect(damage, playerTraits.counter);
+      if (counterDamage > 0) {
+        const newOpHealth = Math.max(0, opponentHealth - counterDamage);
+        setOpponentHealth(newOpHealth);
+        newLogs.push(`🔄 Counter! Reflected ${counterDamage} damage back!`);
+      }
+
       const newPlayerHealth = Math.max(0, playerHealth - damage);
       setPlayerHealth(newPlayerHealth);
       shake();
 
       const actionName = aiAction === BATTLE_ACTIONS.SPECIAL ? 'Special Attack' : 'Attack';
-      logMessage = `${opponent.name} used ${actionName} and dealt ${damage} damage!`;
+      newLogs.push(`${opponent.name} used ${actionName} and dealt ${damage} damage!`);
 
       if (newPlayerHealth <= 0) {
         setBattleEnded(true);
@@ -99,7 +140,7 @@ export default function PvPBattleScreen({ route, navigation }) {
       }
     }
 
-    setBattleLog([logMessage, ...battleLog]);
+    setBattleLog([...newLogs, ...battleLog]);
     setPlayerAction(null);
     setPlayerTurn(true);
   };
@@ -125,6 +166,13 @@ export default function PvPBattleScreen({ route, navigation }) {
                   {opponentDefending && (
                     <MaterialCommunityIcons name="shield" size={24} color={COLORS.ACCENT} />
                   )}
+                  <View style={styles.traitsContainer}>
+                    {Object.values(opponentTraits).filter(t => t).map(trait => (
+                      <View key={trait.id} style={styles.traitBadge}>
+                        <Text style={styles.traitIcon}>{trait.icon}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
                 <View style={styles.healthBarContainer}>
                   <Text style={styles.healthText}>
@@ -146,6 +194,13 @@ export default function PvPBattleScreen({ route, navigation }) {
                   {playerAction === BATTLE_ACTIONS.DEFEND && (
                     <MaterialCommunityIcons name="shield" size={24} color={COLORS.ACCENT} />
                   )}
+                  <View style={styles.traitsContainer}>
+                    {Object.values(playerTraits).filter(t => t).map(trait => (
+                      <View key={trait.id} style={styles.traitBadge}>
+                        <Text style={styles.traitIcon}>{trait.icon}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
                 <View style={styles.healthBarContainer}>
                   <Text style={styles.healthText}>
@@ -335,5 +390,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.TEXT_SECONDARY,
     fontStyle: 'italic',
+  },
+  traitsContainer: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 8,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  traitBadge: {
+    backgroundColor: '#FFE8A5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  traitIcon: {
+    fontSize: 16,
   },
 });

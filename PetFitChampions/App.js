@@ -17,6 +17,8 @@ import HomeScreen from './src/screens/HomeScreen';
 import TrackScreen from './src/screens/TrackScreen';
 import PetScreen from './src/screens/PetScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import GemShopScreen from './src/screens/GemShopScreen';
+import LeaderboardScreen from './src/screens/LeaderboardScreen';
 import BattleScreen from './src/screens/BattleScreen';
 import PvPArenaScreen from './src/screens/PvPArenaScreen';
 import PvPBattleScreen from './src/screens/PvPBattleScreen';
@@ -89,6 +91,23 @@ function BattleStack() {
   );
 }
 
+function ProfileStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="ProfileMain" 
+        component={ProfileScreen}
+        options={{ headerTitle: 'Profile' }}
+      />
+      <Stack.Screen 
+        name="GemShop" 
+        component={GemShopScreen}
+        options={{ headerTitle: 'Gem Shop' }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 function MainTabs() {
   return (
     <Tab.Navigator
@@ -102,6 +121,8 @@ function MainTabs() {
             iconName = focused ? 'clipboard-check' : 'clipboard-check-outline';
           } else if (route.name === 'Battle') {
             iconName = focused ? 'sword-cross' : 'sword';
+          } else if (route.name === 'Leaderboard') {
+            iconName = focused ? 'trophy' : 'trophy-outline';
           } else if (route.name === 'Pet') {
             iconName = focused ? 'paw' : 'paw-outline';
           } else if (route.name === 'Profile') {
@@ -137,14 +158,19 @@ function MainTabs() {
         }}
       />
       <Tab.Screen 
+        name="Leaderboard" 
+        component={LeaderboardScreen}
+        options={{ headerTitle: 'Leaderboard', headerShown: false }}
+      />
+      <Tab.Screen 
         name="Pet" 
         component={PetScreen}
         options={{ headerTitle: 'My Pet' }}
       />
       <Tab.Screen 
         name="Profile" 
-        component={ProfileScreen}
-        options={{ headerTitle: 'Profile' }}
+        component={ProfileStack}
+        options={{ headerShown: false }}
       />
     </Tab.Navigator>
   );

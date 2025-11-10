@@ -4,7 +4,7 @@ import { Card, Title, Text, Button, List } from 'react-native-paper';
 import { AuthContext } from '../context/AuthContext';
 import { PetContext } from '../context/PetContext';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }) {
   const { user, logout } = useContext(AuthContext);
   const { pet, gems } = useContext(PetContext);
 
@@ -81,6 +81,24 @@ export default function ProfileScreen() {
                 <Text style={styles.petType}>Level {pet?.level || 1} {pet?.type || 'Dog'}</Text>
               </View>
             </View>
+          </Card.Content>
+        </Card>
+
+        {/* Gem Shop */}
+        <Card style={styles.card}>
+          <Card.Content>
+            <Text style={styles.sectionTitle}>Shop</Text>
+            <Button 
+              mode="contained" 
+              onPress={() => navigation.navigate('GemShop')}
+              style={styles.shopButton}
+              icon="store"
+            >
+              💎 Gem Shop
+            </Button>
+            <Text style={styles.shopDescription}>
+              Buy cosmetics, stat boosts, battle tricks, and pet slots
+            </Text>
           </Card.Content>
         </Card>
 
@@ -195,5 +213,14 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 32,
     paddingVertical: 6,
+  },
+  shopButton: {
+    marginBottom: 8,
+  },
+  shopDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });

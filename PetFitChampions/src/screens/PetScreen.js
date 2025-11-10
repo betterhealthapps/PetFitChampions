@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Card, Title, Text, ProgressBar, Button, Snackbar } from 'react-native-paper';
 import { PetContext } from '../context/PetContext';
 import { EVOLUTION_TIERS } from '../data/constants';
+import { BATTLE_TRAITS, checkTraitActive } from '../utils/battleTraits';
 
 export default function PetScreen() {
   const { pet, gems, getLevelProgress, evolvePet } = useContext(PetContext);
@@ -188,6 +189,57 @@ export default function PetScreen() {
             )}
           </Card.Content>
         </Card>
+
+        {/* Battle Traits */}
+        <Card style={styles.card}>
+          <Card.Content>
+            <Text style={styles.sectionTitle}>Battle Traits</Text>
+            <Text style={styles.traitsSubtitle}>
+              Passive abilities unlocked by your stats
+            </Text>
+            
+            {Object.values(BATTLE_TRAITS).map(trait => {
+              const isActive = checkTraitActive(pet, trait);
+              const req = trait.requirement;
+              const currentStat = pet.baseStats?.[req.stat] || stats[req.stat] || 0;
+              const threshold = req.value || 0;
+
+              return (
+                <View 
+                  key={trait.id} 
+                  style={[
+                    styles.traitRow,
+                    isActive ? styles.traitActive : styles.traitLocked
+                  ]}
+                >
+                  <Text style={styles.traitIcon}>{trait.icon}</Text>
+                  <View style={styles.traitInfo}>
+                    <Text style={styles.traitName}>{trait.name}</Text>
+                    <Text style={styles.traitDescription}>{trait.description}</Text>
+                    {!isActive && !req.opponent && (
+                      <Text style={styles.traitRequirement}>
+                        Requires {req.stat}: {threshold} (Current: {currentStat})
+                      </Text>
+                    )}
+                    {!isActive && req.opponent && (
+                      <Text style={styles.traitRequirement}>
+                        Requires {req.stat} higher than opponent
+                      </Text>
+                    )}
+                  </View>
+                  <View style={[
+                    styles.traitStatus,
+                    isActive && styles.traitStatusActive
+                  ]}>
+                    <Text style={styles.traitStatusText}>
+                      {isActive ? 'ACTIVE' : 'LOCKED'}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </Card.Content>
+        </Card>
       </View>
       
       <Snackbar
@@ -322,5 +374,62 @@ const styles = StyleSheet.create({
   },
   evolutionButton: {
     marginTop: 8,
+  },
+  traitsSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+  },
+  traitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 2,
+  },
+  traitActive: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#43a047',
+  },
+  traitLocked: {
+    backgroundColor: '#FAFAFA',
+    borderColor: '#E0E0E0',
+  },
+  traitIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  traitInfo: {
+    flex: 1,
+  },
+  traitName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  traitDescription: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 4,
+  },
+  traitRequirement: {
+    fontSize: 11,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  traitStatus: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#BDBDBD',
+  },
+  traitStatusActive: {
+    backgroundColor: '#43a047',
+  },
+  traitStatusText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: 'white',
   },
 });

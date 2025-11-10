@@ -1,6 +1,58 @@
 import { BATTLE_ACTIONS } from '../data/constants';
+import { getAllActiveTraits } from './battleTraits';
 
-export const calculateDamage = (attacker, defender, action) => {
+export const initializeBattleTraits = (playerPet, opponentPet) => {
+  return {
+    playerTraits: getAllActiveTraits(playerPet, opponentPet),
+    opponentTraits: getAllActiveTraits(opponentPet, playerPet),
+  };
+};
+
+export const determineTurnOrder = (playerPet, opponentPet, playerTraits, opponentTraits) => {
+  if (playerTraits.firstStrike && !opponentTraits.firstStrike) {
+    return 'player';
+  }
+  if (opponentTraits.firstStrike && !playerTraits.firstStrike) {
+    return 'opponent';
+  }
+
+  if (playerPet.baseStats.agility > opponentPet.baseStats.agility) {
+    return 'player';
+  }
+  if (opponentPet.baseStats.agility > playerPet.baseStats.agility) {
+    return 'opponent';
+  }
+
+  return Math.random() > 0.5 ? 'player' : 'opponent';
+};
+
+export const applyEnduranceHealing = (currentHealth, maxHealth, trait) => {
+  if (!trait) return currentHealth;
+
+  const healAmount = Math.floor(maxHealth * (trait.healAmount / 100));
+  return Math.min(maxHealth, currentHealth + healAmount);
+};
+
+export const checkCounterReflect = (damage, trait) => {
+  if (!trait) return 0;
+
+  if (Math.random() < trait.chance) {
+    return Math.floor(damage * (trait.reflectAmount / 100));
+  }
+  return 0;
+};
+
+export const checkCriticalHit = (attackerPet, trait) => {
+  let baseCritChance = (attackerPet.baseStats.agility / 100) * 0.2;
+
+  if (trait) {
+    baseCritChance += trait.chance;
+  }
+
+  return Math.random() < baseCritChance;
+};
+
+export const calculateDamage = (attacker, defender, action, traits = null) => {
   const baseAttack = attacker.stats.attack || 50;
   const baseStrength = attacker.stats.strength || 50;
   const baseDefense = defender.stats.defense || 50;
@@ -23,7 +75,16 @@ export const calculateDamage = (attacker, defender, action) => {
   }
   
   const variance = 0.85 + Math.random() * 0.3;
-  return Math.max(1, Math.floor(damage * variance));
+  damage = Math.max(1, Math.floor(damage * variance));
+
+  if (traits && traits.criticalHit && action !== BATTLE_ACTIONS.DEFEND) {
+    const isCrit = checkCriticalHit(attacker, traits.criticalHit);
+    if (isCrit) {
+      damage = Math.floor(damage * traits.criticalHit.multiplier);
+    }
+  }
+
+  return damage;
 };
 
 export const getDefenseBonus = (action) => {
@@ -64,6 +125,7 @@ export const generateOpponent = (playerPet) => {
     type: randomPet.type,
     level: opponentLevel,
     tier: Math.min(3, Math.floor(opponentLevel / 16) + 1),
+    baseStats: scaledStats,
     stats: scaledStats,
     currentHealth: scaledStats.health,
     maxHealth: scaledStats.health,
