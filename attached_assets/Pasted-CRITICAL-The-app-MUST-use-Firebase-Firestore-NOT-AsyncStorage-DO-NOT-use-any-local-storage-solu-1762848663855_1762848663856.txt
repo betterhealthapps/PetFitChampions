@@ -1,0 +1,90 @@
+CRITICAL: The app MUST use Firebase Firestore, NOT AsyncStorage. 
+DO NOT use any local storage solutions.
+
+REQUIREMENTS:
+
+1. REMOVE ALL ASYNCSTORAGE:
+   - Delete or comment out all imports from '@react-native-async-storage/async-storage'
+   - Remove all AsyncStorage.getItem, AsyncStorage.setItem calls
+   - Delete utils/storage.js if it uses AsyncStorage
+   - DO NOT install or use AsyncStorage package
+
+2. INSTALL AND USE FIREBASE ONLY:
+   - Ensure firebase package is in package.json dependencies: "firebase": "^10.7.1"
+   - Run: npm install firebase
+   - Use ONLY Firebase Firestore for all data storage
+   - Use ONLY Firebase Auth for authentication
+
+3. UPDATE PETCONTEXT.JS TO USE FIREBASE:
+   - Import: import { doc, getDoc, updateDoc, setDoc, increment } from 'firebase/firestore';
+   - Import: import { auth, db } from '../config/firebase';
+   - All pet data MUST save to Firestore collection 'users/{userId}'
+   - All gem transactions MUST use Firestore increment()
+   - NO local storage - everything goes to Firebase
+
+4. VERIFY FIREBASE CONFIG EXISTS:
+   - File must exist: PetFitChampions/config/firebase.js
+   - Must export: auth, db
+   - If missing, create it with proper Firebase initialization
+
+5. UPDATE ALL DATA OPERATIONS:
+   - selectPet() → Save to Firestore users/{userId}/pets array
+   - addXP() → Update Firestore with increment()
+   - spendGems() → Update Firestore with increment(-amount)
+   - evolvePet() → Update Firestore pet document
+   - ALL operations must be async and use Firebase
+
+6. PETSELECTIONSCREEN MUST:
+   - Import PetContext: import { PetContext } from '../context/PetContext';
+   - Use: const { selectPet } = useContext(PetContext);
+   - Call: await selectPet(petId) with proper error handling
+   - Navigate after successful Firebase save
+
+7. CHECK AUTHENTICATION:
+   - Ensure Firebase Auth is initialized
+   - Check auth.currentUser exists before Firestore operations
+   - Handle unauthenticated state properly
+
+8. FIX THE BLANK SCREEN:
+   - Check browser console for errors
+   - Ensure no undefined imports
+   - Verify all async operations have try-catch
+   - Make sure Firebase initializes before app renders
+
+EXPECTED FIREBASE STRUCTURE:
+users/{userId} = {
+  email: string,
+  gems: number,
+  pets: [{
+    id: string,
+    name: string,
+    level: number,
+    xp: number,
+    stats: {...},
+    tier: number
+  }],
+  activePetIndex: number,
+  petSlots: number,
+  energy: number,
+  totalXP: number
+}
+
+DO NOT:
+- Use AsyncStorage
+- Use local storage
+- Use cookies
+- Use any browser storage APIs
+
+ONLY USE:
+- Firebase Firestore for data
+- Firebase Auth for users
+- Firebase Storage for images (if needed)
+
+After making changes:
+1. Run: rm -rf node_modules && npm install
+2. Start: npx expo start --web --clear
+3. Test pet selection saves to Firebase
+4. Verify no blank screen
+5. Show me what you changed
+
+IMPORTANT: If you see AsyncStorage anywhere in the code, REPLACE it with Firebase Firestore operations.
