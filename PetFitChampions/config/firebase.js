@@ -5,12 +5,12 @@ import { getStorage } from 'firebase/storage';
 
 // Your Firebase configuration (paste from Step 2)
 const firebaseConfig = {
-  apiKey: "AIzaSyCsyjjcyiCXd9TmaZdfWQSj9whvKzMHDXU",
-  authDomain: "petfitchampions.firebaseapp.com",
-  projectId: "petfitchampions",
-  storageBucket: "petfitchampions.appspot.com",
-  messagingSenderId: "434274586885",
-  appId: "1:434274586885:web:945c05c94a7758b0ea276c"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
