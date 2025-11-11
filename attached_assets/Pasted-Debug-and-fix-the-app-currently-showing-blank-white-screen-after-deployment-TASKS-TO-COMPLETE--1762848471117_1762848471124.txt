@@ -1,0 +1,71 @@
+Debug and fix the app - currently showing blank white screen after deployment.
+
+TASKS TO COMPLETE:
+
+1. VERIFY FIREBASE CONFIGURATION:
+   - Check that PetFitChampions/config/firebase.js exists and is properly configured
+   - Verify Firebase imports in all files use correct path: '../config/firebase'
+   - Ensure firebase package is installed in package.json
+   - Test Firebase initialization doesn't throw errors
+
+2. CHECK ALL PACKAGE DEPENDENCIES:
+   - Verify all required packages are in package.json:
+     * firebase (^10.7.1)
+     * expo (~51.0.0)
+     * react-native-paper (^5.0.0)
+     * @react-navigation/native (^6.0.0)
+     * @react-navigation/stack (^6.0.0)
+   - Run npm install to ensure all packages are installed
+   - Check for any missing peer dependencies
+
+3. FIX PETCONTEXT INTEGRATION:
+   - Verify PetFitChampions/context/PetContext.js imports Firebase correctly
+   - Check that PetContext uses Firebase Firestore instead of local storage
+   - Ensure auth.onAuthStateChanged is implemented
+   - Verify selectPet function creates proper pet document in Firestore
+
+4. CHECK PETSELECTIONSCREEN:
+   - Verify PetFitChampions/screens/PetSelectionScreen.js imports PetContext
+   - Ensure handleConfirmSelection properly calls selectPet from context
+   - Check navigation works after pet selection
+   - Verify all starter pets (VIGOR, ZEN, ATLAS, SWIFT, AERO) are rendered
+   - Ensure ScrollView has contentContainerStyle for proper scrolling
+
+5. VERIFY APP.JS STRUCTURE:
+   - Check that PetProvider wraps the entire app
+   - Verify navigation is properly configured
+   - Ensure no circular imports
+
+6. TEST AUTHENTICATION FLOW:
+   - Verify signup/login screens work with Firebase Auth
+   - Check that new users are redirected to PetSelectionScreen
+   - Ensure existing users skip pet selection
+
+7. CHECK CONSOLE FOR ERRORS:
+   - Look for any JavaScript errors in browser console
+   - Check for Firebase initialization errors
+   - Verify no import/module not found errors
+
+8. FIX COMMON ISSUES:
+   - Ensure no undefined variables
+   - Check all async/await functions have try-catch blocks
+   - Verify all Firebase calls use correct syntax
+   - Make sure no components are missing required props
+
+9. TEST THE FIX:
+   - Clear cache and rebuild: rm -rf .expo node_modules && npm install
+   - Start dev server: npx expo start --web --clear
+   - Verify app loads without blank screen
+   - Test pet selection flow end-to-end
+
+EXPECTED OUTCOME:
+- App loads successfully (no blank screen)
+- Pet selection screen shows all 5 starter pets
+- Selecting a pet saves to Firebase and navigates to home
+- No errors in browser console
+- All packages properly installed
+
+Please check each item and fix any issues found. Show me:
+1. What errors you found
+2. What you fixed
+3. Confirmation that app now loads
