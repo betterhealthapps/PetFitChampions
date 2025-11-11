@@ -12,12 +12,11 @@ export default function PetSelectionScreen({ navigation, route }) {
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   
-  // New state for multi-pet management
-  const [mode, setMode] = useState('select'); // 'select' for first-time, 'switch' for existing users
+  // Multi-pet state
+  const [mode, setMode] = useState('select');
   const [ownedPets, setOwnedPets] = useState([]);
   const [activePetIndex, setActivePetIndex] = useState(0);
   const [petSlots, setPetSlots] = useState(1);
-  const [userGems, setUserGems] = useState(0);
   const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
@@ -26,28 +25,38 @@ export default function PetSelectionScreen({ navigation, route }) {
 
   const checkExistingPets = async () => {
     try {
+      if (!auth.currentUser) {
+        setMode('select');
+        return;
+      }
+
       const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      
+      if (!userDoc.exists()) {
+        setMode('select');
+        return;
+      }
+
       const data = userDoc.data();
       
       if (data.pets && data.pets.length > 0) {
-        // User has pets - switch mode
         setMode('switch');
         setOwnedPets(data.pets);
         setActivePetIndex(data.activePetIndex || 0);
         setPetSlots(data.petSlots || 1);
-        setUserGems(data.gems || 0);
         setIsPremium((data.subscription?.tier || 'free') !== 'free');
       } else {
-        // First time - select starter pet
         setMode('select');
       }
     } catch (error) {
       console.error('Error checking pets:', error);
+      setMode('select');
     }
   };
 
   const handleSelectPet = async (petId) => {
     setSelectedPetId(petId);
+    console.log('Pet selected:', petId);
   };
 
   const handleConfirmSelection = async () => {
@@ -57,16 +66,31 @@ export default function PetSelectionScreen({ navigation, route }) {
       return;
     }
 
-    await selectPet(selectedPetId);
-    setSnackbarMessage(`${STARTER_PETS[selectedPetId.toUpperCase()].name} joined your team!`);
-    setSnackbarVisible(true);
-    
-    setTimeout(() => {
-      navigation.replace('MainTabs');
-    }, 1500);
+    try {
+      console.log('Confirming pet selection:', selectedPetId);
+      
+      const petTemplate = STARTER_PETS[selectedPetId.toUpperCase()];
+      
+      if (!petTemplate) {
+        Alert.alert('Error', 'Invalid pet selection. Please try again.');
+        return;
+      }
+
+      await selectPet(selectedPetId);
+
+      setSnackbarMessage(`${petTemplate.name} joined your team!`);
+      setSnackbarVisible(true);
+      
+      setTimeout(() => {
+        navigation.replace('MainTabs');
+      }, 1500);
+
+    } catch (error) {
+      console.error('Pet selection error:', error);
+      Alert.alert('Error', 'Failed to select pet: ' + error.message);
+    }
   };
 
-  // New: Switch active pet
   const handleSwitchPet = async (index) => {
     if (index === activePetIndex) {
       Alert.alert('Already Active', 'This pet is already your active pet!');
@@ -85,7 +109,6 @@ export default function PetSelectionScreen({ navigation, route }) {
     }
   };
 
-  // New: Add new pet to empty slot
   const handleAddPet = () => {
     if (!isPremium && petSlots >= 1) {
       Alert.alert(
@@ -165,7 +188,6 @@ export default function PetSelectionScreen({ navigation, route }) {
     );
   };
 
-  // New: Render owned pet card for switching
   const renderOwnedPetCard = (pet, index) => {
     const isActive = index === activePetIndex;
 
@@ -188,31 +210,11 @@ export default function PetSelectionScreen({ navigation, route }) {
               </Chip>
             )}
           </View>
-          
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={styles.statEmoji}>❤️</Text>
-              <Text style={styles.statText}>{pet.baseStats.health}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statEmoji}>⚡</Text>
-              <Text style={styles.statText}>{pet.baseStats.energy}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statEmoji}>💪</Text>
-              <Text style={styles.statText}>{pet.baseStats.strength}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statEmoji}>🛡️</Text>
-              <Text style={styles.statText}>{pet.baseStats.defense}</Text>
-            </View>
-          </View>
         </Card.Content>
       </Card>
     );
   };
 
-  // New: Render empty/locked slots
   const renderEmptySlot = (index) => {
     return (
       <Card key={`empty-${index}`} style={styles.emptySlotCard}>
@@ -227,7 +229,7 @@ export default function PetSelectionScreen({ navigation, route }) {
             onPress={handleAddPet}
             style={styles.addPetButton}
           >
-            {isPremium ? 'Add Pet' : 'Upgrade to Premium'}
+            {isPremium ? 'Add Pet' : 'Upgrade'}
           </Button>
         </Card.Content>
       </Card>
@@ -239,42 +241,36 @@ export default function PetSelectionScreen({ navigation, route }) {
       <Card key={`locked-${index}`} style={styles.lockedSlotCard}>
         <Card.Content style={styles.emptySlotContent}>
           <Text style={styles.emptySlotIcon}>🔒</Text>
-          <Title style={styles.emptySlotText}>Slot Locked</Title>
-          <Text style={styles.requirementText}>500 Gems to Unlock</Text>
+          <Title style={styles.emptySlotText}>Locked</Title>
+          <Text style={styles.requirementText}>500 Gems</Text>
           <Button 
             mode="outlined" 
             onPress={() => navigation.navigate('GemShop')}
             style={styles.addPetButton}
           >
-            Go to Gem Shop
+            Unlock
           </Button>
         </Card.Content>
       </Card>
     );
   };
 
-  // Render based on mode
+  // SWITCH MODE (existing pets)
   if (mode === 'switch') {
     return (
-      <ScrollView style={styles.container}>
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.content}>
           <Title style={styles.title}>Your Pets</Title>
           <Text style={styles.subtitle}>
-            Tap to switch active pet • {ownedPets.length}/{petSlots} slots used
+            Tap to switch • {ownedPets.length}/{petSlots} slots
           </Text>
 
-          {/* Owned Pets */}
           {ownedPets.map((pet, index) => renderOwnedPetCard(pet, index))}
-
-          {/* Empty Slots */}
-          {Array.from({ length: petSlots - ownedPets.length }).map((_, i) => 
-            renderEmptySlot(i)
-          )}
-
-          {/* Locked Slots */}
-          {Array.from({ length: 3 - petSlots }).map((_, i) => 
-            renderLockedSlot(i)
-          )}
+          {Array.from({ length: petSlots - ownedPets.length }).map((_, i) => renderEmptySlot(i))}
+          {Array.from({ length: 3 - petSlots }).map((_, i) => renderLockedSlot(i))}
 
           <Button
             mode="contained"
@@ -282,7 +278,7 @@ export default function PetSelectionScreen({ navigation, route }) {
             style={styles.confirmButton}
             icon="arrow-left"
           >
-            Back to Home
+            Back
           </Button>
         </View>
 
@@ -297,9 +293,12 @@ export default function PetSelectionScreen({ navigation, route }) {
     );
   }
 
-  // Original first-time selection mode
+  // SELECT MODE (first time)
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+    >
       <View style={styles.content}>
         <Title style={styles.title}>Choose Your Starter Pet</Title>
         <Text style={styles.subtitle}>
@@ -310,6 +309,7 @@ export default function PetSelectionScreen({ navigation, route }) {
         {renderPetCard('ZEN')}
         {renderPetCard('ATLAS')}
         {renderPetCard('SWIFT')}
+        {renderPetCard('AERO')}
 
         <Button
           mode="contained"
@@ -337,6 +337,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40, // Extra padding at bottom
   },
   content: {
     padding: 16,
