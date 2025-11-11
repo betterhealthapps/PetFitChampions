@@ -38,6 +38,10 @@ externalPort = 3001
 localPort = 33413
 externalPort = 3000
 
+[[ports]]
+localPort = 46427
+externalPort = 3002
+
 [deployment]
 run = ["sh", "-c", "cd PetFitChampions && npx expo start --web --port 5000"]
 deploymentTarget = "cloudrun"
