@@ -1,3 +1,7 @@
+// Only needed for development
+if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
